@@ -437,3 +437,94 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .poi-skills div { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
 .poi-skills em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; min-width: 64px; }
 .poi-skills span { font-size: 11px; border: 1.5px solid #00a6c8; color: #0a5566; border-radius: 999px; padding: 0 7px; background: #e6f9fd; }
+
+/* ============ Version téléphone ============ */
+@media (max-width: 640px) {
+  /* En-tête et instruments : compacts, sur une ligne. */
+  .brand { top: 8px; left: 8px; padding: 4px 4px 4px 9px; gap: 6px; border-radius: 10px; max-width: calc(100vw - 132px); }
+  .brand strong { font-size: 12px; white-space: nowrap; }
+  .brand .btn { padding: 4px 8px; font-size: 11px; }
+  .instruments { top: 8px; right: 8px; padding: 4px 8px 4px 4px; gap: 5px; border-radius: 10px; }
+  .compass { width: 30px; height: 30px; }
+  .readout b { font-size: 16px; }
+  .readout .small:not(#clock) { display: none; }
+  #clock { font-size: 10px; }
+  .badge { font-size: 9px; padding: 1px 6px; }
+  #minimap { top: 52px; bottom: auto; left: 8px; width: 74px; height: 74px; border-radius: 10px; }
+
+  /* Fiches : un tiroir en bas de l'écran, compact et défilant. */
+  .card.docked { left: 6px; right: 6px; bottom: 6px; top: auto; width: auto; max-height: 40vh; overflow: auto; padding: 10px 12px 12px; border-radius: 14px; border-top-width: 5px; transform: none !important; }
+  .card .logo { width: 40px; height: 40px; font-size: 13px; border-width: 2px; }
+  .card-head { gap: 10px; }
+  .card .kicker { font-size: 10.5px; }
+  .card h2 { font-size: 18px; }
+  .card .sub { font-size: 13px; margin-top: 6px; }
+  .card .tags { margin-top: 8px; gap: 4px; }
+  .card .tags span { font-size: 11px; padding: 1px 8px; }
+  .card .body { font-size: 12.5px; margin-top: 8px; }
+  .card .list { gap: 5px; max-height: none; }
+  .card .list li { font-size: 12px; padding-top: 5px; }
+  .card .list b { font-size: 12.5px; }
+  .card .live { margin-top: 8px; padding: 7px 9px; }
+  .card .live .txt { font-size: 12.5px; }
+  .card .btn { margin-top: 8px; padding: 7px 12px; font-size: 13px; }
+  .card .meta { margin-top: 6px; }
+
+  /* Bouton d'action : toujours au-dessus du tiroir. */
+  .action { bottom: calc(var(--sheet-h, 0px) + 12px); font-size: 14px; padding: 9px 16px; }
+
+  /* Télémétrie : un bandeau compact en haut, sans les requêtes. */
+  .telemetry { top: 52px; left: auto; right: 8px; bottom: auto; width: min(220px, calc(100vw - 100px)); max-height: 34vh; padding: 7px 9px; border-radius: 12px; }
+  .telemetry header { font-size: 10px; }
+  .tm-tag { font-size: 9px; }
+  .tm-rate { font-size: 10px; }
+  .tm-legend { font-size: 9.5px; gap: 8px; margin: 3px 0; }
+  .tm-charts { gap: 4px; }
+  .tm-chart figcaption { font-size: 10px; }
+  .tm-chart figcaption b { font-size: 14px; }
+  .tm-chart canvas { height: 26px; }
+  .tm-line, .tm-sql { display: none; }
+
+  /* Carte géographique / tampon, chrono et messages de régate. */
+  #stamp { top: 52px; right: 8px; width: 170px; padding: 5px 5px 6px; border-radius: 12px; }
+  #stamp.regattas { width: 210px; }
+  #stamp .place { font-size: 12px; margin-top: 4px; }
+  #stamp .coords, #stamp .dist { font-size: 10px; }
+  .race-hud { top: 52px; min-width: 0; padding: 5px 12px; }
+  .race-hud b { font-size: 17px; }
+  .race-hud span { font-size: 11px; }
+  .toast { top: auto; bottom: calc(var(--sheet-h, 0px) + 64px); font-size: 12px; padding: 6px 10px; }
+
+  /* Étiquettes du monde plus petites. */
+  .label { font-size: 10.5px; padding: 2px 6px; border-width: 1.5px; border-radius: 7px; }
+  .label i { font-size: 9px; }
+  .label-place { font-size: 11px; }
+  .label-buoy { border-bottom-width: 3px; }
+  .label-title b { font-size: 15px; }
+  .label-title span { font-size: 11px; }
+  .label-step b { font-size: 12px; }
+  .label-step i, .label-step img, .label-step .emo { width: 16px; height: 16px; font-size: 11px; }
+  .label-region { font-size: 15px; padding: 2px 8px; }
+
+  /* Écran d'accueil : plus court, sans l'aide clavier. */
+  #intro { padding: 8px; }
+  #intro .panel { padding: 14px 14px 12px; border-radius: 16px; box-shadow: 0 5px 0 var(--ink); }
+  #intro .eyebrow { font-size: 10px; }
+  #intro h1 { font-size: 24px; }
+  #intro .lead { font-size: 13px; margin-bottom: 6px; }
+  #intro p { font-size: 13px; margin: 6px 0; }
+  .ask { font-size: 15px; margin: 8px 0 6px; }
+  .choice { padding: 8px 10px; }
+  .choice .ico { font-size: 22px; }
+  .choice b { font-size: 14px; }
+  .keys { display: none; }
+  .actions { margin-top: 8px; }
+
+  /* Grande carte, équipe d'agents, carte des savoirs, CV. */
+  .overlay { padding: 8px; }
+  .panel.map-panel { grid-template-columns: 1fr; gap: 8px; padding: 10px; }
+  #map-pois { max-height: 30vh; }
+  .team-panel { padding: 16px 14px 18px; }
+  .team-panel h2 { font-size: 22px; }
+  .cv { padding: 18px 14px; }
+}

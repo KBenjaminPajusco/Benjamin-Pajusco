@@ -17,7 +17,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 // --- Rendu
 const canvas = $('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(max-width: 640px)').matches ? 1.5 : 2)); // plus léger sur téléphone
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -774,6 +774,8 @@ function tick(dt) {
   let fx = started ? boat.pos.x + ahead.x : INTRO_VIEW.x;
   let fz = started ? boat.pos.y + ahead.y : INTRO_VIEW.z;
   if (mode === 'walk') { fx = walker.pos.x; fz = walker.pos.y; }
+  // Téléphone : quand le tiroir de fiche est ouvert en bas, on remonte la scène pour garder le bateau visible.
+  if (docked() && !card.hidden) fz += 22 * userZoom * (portrait() ? 1.5 : 1);
   // Une zone peut attirer le regard vers ce qu'elle montre (le café, la piste…).
   if (started && activeZone?.look) {
     const w = mode === 'walk' ? 0.3 : 0.5;
@@ -802,6 +804,8 @@ function tick(dt) {
   renderMinimap();
   updateLabels(focus);
   placeCard();
+  // Hauteur du tiroir (mobile) : le bouton d'action et les messages se placent au-dessus.
+  document.documentElement.style.setProperty('--sheet-h', docked() && !card.hidden ? `${card.offsetHeight + 6}px` : '0px');
   drawMap(mm);
   if (!mapOverlay.hidden) {
     mapRenderer.render(scene, mapCam);
