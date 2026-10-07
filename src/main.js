@@ -1,0 +1,823 @@
+import * as THREE from 'three';
+import { Boat } from './boat.js';
+import { buildWorld, LAYOUT } from './world.js';
+import { Wake, WindStreaks } from './effects.js';
+import { Walker } from './walker.js';
+import { Rib } from './rib.js';
+import { applyDayNight, currentHour } from './daynight.js';
+import { STEPS, TEAM } from './cafe.js';
+import { renderGeoMap, renderRegattaMap } from './geomap.js';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js';
+import { Race, COURSE } from './race.js';
+
+const $ = (s) => document.querySelector(s);
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+// --- Rendu
+const canvas = $('#scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#2c7fb8');
+const camera = new THREE.PerspectiveCamera(30, 1, 5, 9000);
+
+const hemi = new THREE.HemisphereLight('#ffffff', '#7fb8d8', 1.4);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff4e0', 2.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 10, far: 500 });
+sun.shadow.bias = -0.0005;
+scene.add(sun, sun.target);
+
+const world = buildWorld(scene);
+// Régate en flotte à l'ouest : son plan d'eau, sa zone et son étiquette.
+const race = new Race(scene, world);
+{
+  const { line } = COURSE;
+  const cx = (line.x0 + line.x1) / 2;
+  world.zones.push({
+    id: 'regate', x: cx, z: line.z + 18, r: 46, zoom: 1.4, anchor: new THREE.Vector3(line.x0, 10, line.z),
+    card: {
+      kicker: 'Régate en flotte', title: 'Prends le départ !', accent: '#ffc845', raceBtn: true,
+      body: 'Contre 7 foilers. Passe la ligne vers le nord après le signal, contourne la bouée jaune au nord, reviens finir sur la ligne. Règles : bâbord amure s’écarte de tribord amure ; au vent s’écarte de sous le vent ; celui qui est derrière s’écarte de celui devant.',
+      tags: ['Départ 30 s après inscription', 'Règles de base'],
+    },
+  });
+  world.labels.push({ pos: new THREE.Vector3(line.x0, 12, line.z), html: '🏁 Régate', cls: 'label-place', zone: 'regate', hideInZone: true });
+}
+let boat = new Boat(); // remplacé par un semi-rigide si le visiteur ne navigue pas
+boat.pos.set(LAYOUT.start.x, LAYOUT.start.z);
+scene.add(boat.root);
+const wake = new Wake();
+scene.add(wake.points);
+const streaks = new WindStreaks();
+scene.add(streaks.group);
+const walker = new Walker();
+scene.add(walker.root);
+const stream = new DataStream();
+scene.add(stream.mesh);
+const recorder = new Recorder();
+const telemetry = new TelemetryPanel($('#telemetry'), recorder);
+const mastTop = new THREE.Vector3();
+let mode = 'boat'; // 'boat' | 'walk'
+
+// --- Commandes : clavier (relatif au bateau) ou pointeur maintenu (aller vers un point).
+const keys = new Set();
+let started = false;
+let touched = false;
+addEventListener('keydown', (e) => {
+  if ($('#cv').hidden === false) { if (e.key === 'Escape') closeCv(); return; }
+  if ($('#map').hidden === false) { if (e.key === 'Escape') closeMap(); return; }
+  if ($('#team').hidden === false) { if (e.key === 'Escape') closeTeam(); return; }
+  if ($('#savoirs').hidden === false) { if (e.key === 'Escape') $('#savoirs').hidden = true; return; }
+  if (e.key.toLowerCase() === 'm' && started) { openMap(); return; }
+  if (e.key.toLowerCase() === 'e' && started) { doAction(); return; }
+  if (!started) start();
+  keys.add(e.key.toLowerCase());
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+addEventListener('blur', () => keys.clear());
+
+const pointer = { active: false, ndc: new THREE.Vector2() };
+canvas.addEventListener('pointerdown', (e) => {
+  if (!started) start();
+  pointer.active = true;
+  setPointer(e);
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => pointer.active && setPointer(e));
+canvas.addEventListener('pointerup', () => { pointer.active = false; });
+canvas.addEventListener('pointercancel', () => { pointer.active = false; });
+function setPointer(e) {
+  pointer.ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+}
+
+let userZoom = 1.2; // un peu plus large par défaut
+canvas.addEventListener('wheel', (e) => {
+  userZoom = THREE.MathUtils.clamp(userZoom * Math.exp(e.deltaY * 0.001), 0.2, 14); // dézoom large : vue d'ensemble du plan d'eau
+  e.preventDefault();
+}, { passive: false });
+
+const raycaster = new THREE.Raycaster();
+const waterPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitPoint = new THREE.Vector3();
+
+function readInput() {
+  const k = (...names) => names.some((n) => keys.has(n));
+  const input = { steer: 0, power: 0, brake: false };
+  if (k('arrowleft', 'a', 'q')) input.steer += 1;
+  if (k('arrowright', 'd')) input.steer -= 1;
+  if (k('arrowup', 'w', 'z')) input.power = 1;
+  if (k('arrowdown', 's')) input.brake = true;
+  if (pointer.active) {
+    raycaster.setFromCamera(pointer.ndc, camera);
+    if (raycaster.ray.intersectPlane(waterPlane, hitPoint)) {
+      const dx = hitPoint.x - boat.pos.x, dz = hitPoint.z - boat.pos.y;
+      const err = wrap(Math.atan2(dx, dz) - boat.heading);
+      input.steer = THREE.MathUtils.clamp(err * 1.8, -1, 1);
+      input.power = Math.hypot(dx, dz) > 12 ? 1 : 0.3;
+    }
+  }
+  if (!started) { input.steer = 0; input.power = 0.1; }
+  input.any = input.steer !== 0 || input.power > 0 || input.brake;
+  if (!touched && (input.steer || input.power === 1)) {
+    touched = true;
+    setTimeout(() => $('#hint').classList.add('gone'), 2500);
+  }
+  return input;
+}
+
+// À pied, les directions sont celles de l'écran (haut = nord) : plus naturel en vue de dessus.
+function readWalkInput() {
+  const k = (...names) => names.some((n) => keys.has(n));
+  const v = { x: 0, z: 0, run: keys.has('shift') };
+  if (k('arrowleft', 'a', 'q')) v.x -= 1;
+  if (k('arrowright', 'd')) v.x += 1;
+  if (k('arrowup', 'w', 'z')) v.z -= 1;
+  if (k('arrowdown', 's')) v.z += 1;
+  if (pointer.active) {
+    raycaster.setFromCamera(pointer.ndc, camera);
+    if (raycaster.ray.intersectPlane(waterPlane, hitPoint)) {
+      const dx = hitPoint.x - walker.pos.x, dz = hitPoint.z - walker.pos.y, d = Math.hypot(dx, dz);
+      if (d > 2) { v.x = dx / d; v.z = dz / d; }
+    }
+  }
+  return v;
+}
+
+// --- Débarquer / rembarquer.
+const actionBtn = $('#action');
+let landing = null;
+let actionCheck = 0;
+function updateAction(dt) {
+  actionCheck -= dt;
+  if (mode === 'boat') {
+    if (actionCheck <= 0) {
+      actionCheck = 0.2;
+      // Dans le port, on peut débarquer de n'importe où dans le bassin, même lancé : on est posé sur le quai le plus proche.
+      const inPort = world.inPort(boat.pos);
+      landing = started && (inPort || boat.speed < 5) ? world.landingSpot(boat.pos.x, boat.pos.y, inPort ? 140 : 24) : null;
+    }
+    setAction(landing ? 'Débarquer' : null);
+  } else {
+    setAction(Math.hypot(walker.pos.x - boat.pos.x, walker.pos.y - boat.pos.y) < 28 ? 'Rembarquer' : null);
+  }
+}
+function setAction(label) {
+  actionBtn.hidden = !label;
+  if (label) actionBtn.innerHTML = `${label} <kbd>E</kbd>`;
+}
+function disembark(spot) {
+  mode = 'walk';
+  walker.place(spot.x, spot.y, world);
+  walker.heading = Math.atan2(spot.x - boat.pos.x, spot.y - boat.pos.y);
+  walker.root.visible = true;
+  boat.speed = 0;
+  $('#hint').textContent = 'Flèches pour marcher · Maj pour courir · ou garde le clic enfoncé · E pour rembarquer près du bateau';
+  $('#hint').classList.remove('gone');
+  setTimeout(() => $('#hint').classList.add('gone'), 4000);
+}
+function doAction() {
+  if (mode === 'boat' && landing) disembark(landing);
+  else if (mode === 'walk' && !actionBtn.hidden) {
+    mode = 'boat';
+    walker.root.visible = false;
+  }
+}
+actionBtn.addEventListener('click', doAction);
+
+// --- Étiquettes HTML accrochées au monde.
+const labelLayer = $('#labels');
+const labels = world.labels.map((l) => {
+  const el = document.createElement('div');
+  el.className = `label ${l.cls}`;
+  el.innerHTML = l.html;
+  el.style.left = el.style.top = '0';
+  labelLayer.appendChild(el);
+  return { ...l, el, src: l };
+});
+const proj = new THREE.Vector3();
+const toScreen = (v) => {
+  proj.copy(v).project(camera);
+  return { x: ((proj.x + 1) / 2) * innerWidth, y: ((1 - proj.y) / 2) * innerHeight };
+};
+function updateLabels(focus) {
+  const zoneId = activeZone?.id;
+  const overworld = ow > 0.5;
+  for (const l of labels) {
+    // Carte du monde : seuls les grands noms de régions ; sinon, tous les détails sauf ces noms.
+    if (!!l.overworld !== overworld) { l.el.style.opacity = 0; continue; }
+    // zone : visible seulement dans cette zone ; hideInZone : masquée quand la grande fiche la remplace.
+    const gated = l.zone && (l.hideInZone ? zoneId === l.zone : zoneId !== l.zone);
+    proj.copy(l.pos).project(camera);
+    const dist = Math.hypot(l.pos.x - focus.x, l.pos.z - focus.z);
+    // Plus on dézoome, plus on garde d'étiquettes visibles.
+    const reach = overworld ? 1e5 : 260 * Math.max(1, userZoom);
+    const visible = !gated && proj.z < 1 && Math.abs(proj.x) < 1.15 && Math.abs(proj.y) < 1.15 && dist < reach;
+    l.el.style.opacity = visible ? Math.min(1, (reach - dist) / 60) : 0;
+    l.el.classList.toggle('active', !!l.src.active);
+    if (visible) l.el.style.transform = `translate(${((proj.x + 1) / 2) * innerWidth}px, ${((1 - proj.y) / 2) * innerHeight}px) translate(-50%, -100%)`;
+  }
+}
+
+// --- Fiche de la zone active, accrochée au-dessus de ce qu'elle décrit.
+const card = $('#card');
+let activeZone = null;
+let cardSize = { w: 0, h: 0 };
+function renderCard(z) {
+  const c = z.card;
+  card.style.setProperty('--card-accent', c.accent || '#ff6a4d');
+  const logo = card.querySelector('.logo');
+  logo.hidden = !c.brand;
+  if (c.brand) {
+    logo.style.background = c.brand.color;
+    logo.style.color = c.brand.ink || '#fff';
+    logo.textContent = c.brand.mono;
+    if (c.logo) {
+      const img = new Image();
+      img.alt = c.title;
+      img.onload = () => { logo.textContent = ''; logo.style.background = '#fff'; logo.classList.toggle('round', !!c.brand.round); logo.appendChild(img); };
+      img.src = c.logo;
+    }
+  }
+  card.querySelector('.kicker').textContent = c.kicker || '';
+  card.querySelector('h2').textContent = c.title;
+  const sub = card.querySelector('.sub');
+  sub.textContent = c.sub || '';
+  sub.hidden = !c.sub;
+  const tags = card.querySelector('.tags');
+  tags.innerHTML = '';
+  (c.tags || []).forEach((t) => { const el = document.createElement('span'); el.textContent = t; tags.appendChild(el); });
+  const body = card.querySelector('.body');
+  body.textContent = c.body || '';
+  body.hidden = !c.body;
+  const list = card.querySelector('.list');
+  list.innerHTML = '';
+  (c.list || []).forEach((it) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<b></b><span></span>${it.body ? '<p></p>' : ''}`;
+    li.querySelector('b').textContent = it.title;
+    li.querySelector('span').textContent = it.sub;
+    if (it.body) li.querySelector('p').textContent = it.body;
+    list.appendChild(li);
+  });
+  const live = card.querySelector('.live');
+  live.hidden = !z.live;
+  if (z.live) renderLive(true);
+  const extra = card.querySelector('.extra');
+  extra.hidden = z.id !== 'agents';
+  card.querySelector('.concepts-btn').hidden = !c.concepts;
+  card.querySelector('.race-btn').hidden = !c.raceBtn;
+  const meta = card.querySelector('.meta');
+  meta.textContent = c.meta || '';
+  meta.hidden = !c.meta;
+  card.querySelector('[data-open-cv]').hidden = !c.cta;
+  card.hidden = false;
+  card.classList.remove('pop');
+  void card.offsetWidth;
+  card.classList.add('pop');
+  cardSize = { w: card.offsetWidth, h: card.offsetHeight };
+}
+function updateZones() {
+  // En bateau on regarde les zones sur l'eau ; à pied, leur version à terre (land).
+  const me = mode === 'walk' ? walker.pos : boat.pos;
+  let best = null, bestScore = 1;
+  for (const z of world.zones) {
+    const area = mode === 'walk' ? z.land : z;
+    if (!area) continue;
+    if (z.id === 'regate' && race.playerIn) continue; // inscrit : la fiche laisse place au plan d'eau et au chrono
+    const s = Math.hypot(me.x - area.x, me.y - area.z) / area.r;
+    if (s < bestScore) { bestScore = s; best = z; }
+  }
+  if (best !== activeZone) {
+    activeZone = best;
+    if (best) renderCard(best); else card.hidden = true;
+    // La carte reste affichée tant qu'on est dans la zone du lieu.
+    if (best?.id === 'shn') showRegattas();
+    else if (best?.geo) showStamp(best.geo);
+    else stamp.hidden = true;
+  }
+}
+// Narration en direct de la boucle d'autofix, synchronisée avec le ticket qui circule.
+function renderLive(force = false) {
+  const st = world.cafe.state;
+  if (!force && !st.changed) return;
+  st.changed = false;
+  const live = card.querySelector('.live');
+  live.querySelector('.step').textContent = `${STEPS.indexOf(STEPS[st.step]) + 1}/${STEPS.length} · ${STEPS[st.step].name}`;
+  live.querySelector('.txt').textContent = st.text;
+  live.classList.toggle('branch', st.branch && st.step === 7);
+  live.classList.remove('tick'); void live.offsetWidth; live.classList.add('tick');
+  if (!force) cardSize = { w: card.offsetWidth, h: card.offsetHeight };
+}
+// Tampon de voyage : chaque lieu est resitué sur la vraie carte, avec la distance depuis le précédent.
+const stamp = $('#stamp');
+let lastGeo = null;
+function haversineKm(a, b) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function showStamp(geo) {
+  const fmt = (v, p, n) => `${Math.abs(v).toFixed(2)}° ${v >= 0 ? p : n}`;
+  stamp.classList.remove('regattas');
+  // En France, le nom de la ville suffit ; la carte n'apparaît que pour l'étranger.
+  const local = geo.flag === 'FR';
+  stamp.classList.toggle('simple', local);
+  if (!local) renderGeoMap(stamp.querySelector('svg'), geo, lastGeo).catch(() => {});
+  stamp.querySelector('.place').textContent = geo.place;
+  stamp.querySelector('.coords').textContent = `${fmt(geo.lat, 'N', 'S')} · ${fmt(geo.lon, 'E', 'O')}`;
+  const far = lastGeo && lastGeo.place !== geo.place ? Math.round(haversineKm(lastGeo, geo)) : 0;
+  stamp.querySelector('.dist').textContent = far ? `${far.toLocaleString('fr-FR')} km depuis ${lastGeo.place}` : '';
+  stamp.classList.toggle('far', far > 1000);
+  lastGeo = geo;
+  stamp.hidden = false;
+  stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show');
+}
+// Bouée « Sportif de haut niveau » : tous les plans d'eau où j'ai régaté.
+function showRegattas() {
+  stamp.classList.remove('simple', 'far');
+  stamp.classList.add('regattas');
+  renderRegattaMap(stamp.querySelector('svg'), REGATTAS).then((far) => {
+    stamp.querySelector('.dist').textContent = far.length ? `+ ${far.join(', ')}` : '';
+  }).catch(() => {});
+  stamp.querySelector('.place').textContent = `${REGATTAS.length} plans d’eau en régate`;
+  stamp.querySelector('.coords').textContent = 'de la Bretagne à la Baltique';
+  stamp.querySelector('.dist').textContent = '';
+  stamp.hidden = false;
+  stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show');
+}
+const docked = () => innerWidth < 640;
+function placeCard() {
+  if (!activeZone) return;
+  card.classList.toggle('docked', docked());
+  card.classList.toggle('side', !!activeZone.cardSide && !docked());
+  if (docked() || !activeZone.anchor) { card.style.transform = ''; return; }
+  // Certaines scènes (l'open space) se lisent en entier : la fiche se range à gauche au lieu de les recouvrir.
+  if (activeZone.cardSide) { card.style.transform = `translate(16px, ${84}px)`; return; }
+  const p = toScreen(activeZone.anchor);
+  const m = 16, top = 84;
+  let x = THREE.MathUtils.clamp(p.x, cardSize.w / 2 + m, innerWidth - cardSize.w / 2 - m);
+  const y = THREE.MathUtils.clamp(p.y - (activeZone.card.brand ? 46 : 22), cardSize.h + top, innerHeight - m);
+  // Si la fiche recouvre le joueur (bateau ou marin), elle s'écarte sur le côté opposé.
+  const me = toScreen(mode === 'walk' ? walker.root.position : boat.root.position);
+  const pad = 50;
+  if (me.x > x - cardSize.w / 2 - pad && me.x < x + cardSize.w / 2 + pad && me.y > y - cardSize.h - pad && me.y < y + pad) {
+    const left = me.x - cardSize.w / 2 - pad * 1.5, right = me.x + cardSize.w / 2 + pad * 1.5;
+    x = me.x > innerWidth / 2 ? left : right;
+    x = THREE.MathUtils.clamp(x, cardSize.w / 2 + m, innerWidth - cardSize.w / 2 - m);
+  }
+  card.style.transform = `translate(${x - cardSize.w / 2}px, ${y - cardSize.h}px)`;
+  // La pointe reste sous l'objet même quand la fiche est poussée contre un bord.
+  card.style.setProperty('--tail-x', `${THREE.MathUtils.clamp(p.x - (x - cardSize.w / 2), 24, cardSize.w - 24)}px`);
+}
+
+// --- Carte : mini-carte en bas à gauche, grande carte avec les lieux à rejoindre en un clic.
+const POI_GROUPS = [
+  { title: 'Centres d’intérêt', ids: ['run', 'gym'] },
+  { title: 'Flux IA', ids: ['agents'] },
+  { title: 'Mon parcours', ids: EXPERIENCES.map((e) => e.id) },
+  { title: 'Formation', ids: ['polytech', 'ronarch', 'guelph'] },
+  { title: 'Lieux', ids: ['regate', 'phare', 'port'] },
+];
+const POI_NAMES = { regate: 'Régate en flotte', phare: 'Le Phare des maîtrises', agents: 'Open space des agents', run: 'Course à pied', gym: 'Muscu', formation: 'Formation', monde: 'International', perf: 'Zone perf', port: 'Ponton d’arrivée' };
+// Décalage des noms sur la grande carte (le port est compact, les noms se chevaucheraient).
+const MAP_LABEL_OFFSET = { agents: [0, -14, 'right'], run: [0, -14, 'left'], gym: [10, 5, 'left'], port: [0, 30, 'center'], perf: [10, 5, 'left'] };
+const poiName = (z) => POI_NAMES[z.id] || z.card.title;
+const zoneById = Object.fromEntries(world.zones.map((z) => [z.id, z]));
+const mm = $('#minimap');
+const big = $('#map-canvas');
+// Fenêtre de monde affichée, cadrée sur le contenu (et non sur toute la mer).
+const MAP_GROUPS = [
+  { name: 'Centres d’intérêt', ids: ['run', 'gym'], at: 'gym' }, // la corniche fait le tour de l'île : on pose le nom sur le parc
+  { name: 'Formation', ids: ['polytech', 'ronarch', 'guelph'] },
+  { name: 'Emploi actuel', ids: ['kc'] },
+  { name: 'Compétences', ids: ['phare'] },
+  { name: 'Régate', ids: ['regate'] },
+];
+const MAP_SPAN = 800, MAP_CX = 25, MAP_CZ = -40;
+const mapScale = (W) => W / MAP_SPAN;
+
+const mapCam = new THREE.OrthographicCamera(-MAP_SPAN / 2, MAP_SPAN / 2, MAP_SPAN / 2, -MAP_SPAN / 2, 10, 6000);
+mapCam.up.set(0, 0, -1); // nord en haut
+mapCam.position.set(MAP_CX, 3000, MAP_CZ);
+mapCam.lookAt(MAP_CX, 0, MAP_CZ);
+const mapRenderer = new THREE.WebGLRenderer({ canvas: $('#map-gl'), antialias: true });
+mapRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+mapRenderer.setSize(720, 720, false);
+
+function renderMinimap() {
+  const r = mm.getBoundingClientRect();
+  const y = innerHeight - r.bottom;
+  renderer.shadowMap.autoUpdate = false; // les ombres de la vue principale suffisent
+  renderer.setScissorTest(true);
+  renderer.setViewport(r.left, y, r.width, r.height);
+  renderer.setScissor(r.left, y, r.width, r.height);
+  renderer.render(scene, mapCam);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, innerWidth, innerHeight);
+  renderer.shadowMap.autoUpdate = true;
+}
+
+// Calque 2D au-dessus du rendu 3D : bateau, marin, noms des lieux.
+function drawMap(canvas, { names = false, highlight = null } = {}) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, s = mapScale(W), k = W / 340;
+  const X = (x) => W / 2 + (x - MAP_CX) * s, Y = (z) => W / 2 + (z - MAP_CZ) * s;
+  ctx.clearRect(0, 0, W, W);
+  // Les bouées sont minuscules vues d'aussi haut : une pastille aux couleurs de la marque les signale.
+  for (const b of world.map.buoys) {
+    ctx.fillStyle = b.color; ctx.strokeStyle = '#fffdf8'; ctx.lineWidth = 1.5 * k;
+    ctx.beginPath(); ctx.arc(X(b.x), Y(b.z), 4 * k, 0, 7); ctx.fill(); ctx.stroke();
+  }
+  if (names) {
+    ctx.font = `700 ${11 * k}px "Space Grotesk", sans-serif`;
+    ctx.textAlign = 'center';
+    // Sur la carte, des catégories plutôt que le détail : un nom par groupe de lieux, posé au centre du groupe.
+    for (const grp of MAP_GROUPS) {
+      const zs = grp.ids.map((id) => zoneById[id]).filter(Boolean);
+      if (!zs.length) continue;
+      const pts = (grp.at ? [zoneById[grp.at]] : zs).map((z) => z.land || z);
+      const x = pts.reduce((t, p) => t + p.x, 0) / pts.length, z = pts.reduce((t, p) => t + p.z, 0) / pts.length;
+      const on = grp.ids.includes(highlight);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = on ? '#ff6a4d' : '#1d2533';
+      ctx.beginPath(); ctx.arc(X(x), Y(z), 4 * k, 0, 7); ctx.fill();
+      ctx.lineWidth = 4 * k; ctx.strokeStyle = '#fffdf8'; ctx.strokeText(grp.name, X(x), Y(z) - 10 * k);
+      ctx.fillText(grp.name, X(x), Y(z) - 10 * k);
+    }
+    // Survol d'une étape du parcours dans la liste : on l'affiche quand même.
+    const hz = zoneById[highlight];
+    if (hz?.card.brand && EXPERIENCES.some((e) => e.id === highlight)) {
+      ctx.fillStyle = '#ff6a4d';
+      ctx.lineWidth = 4 * k; ctx.strokeStyle = '#fffdf8';
+      ctx.strokeText(poiName(hz), X(hz.x), Y(hz.z) - 10 * k);
+      ctx.fillText(poiName(hz), X(hz.x), Y(hz.z) - 10 * k);
+    }
+  }
+  if (mode === 'walk') {
+    ctx.fillStyle = '#ff6a4d'; ctx.strokeStyle = '#1d2533'; ctx.lineWidth = 2 * k;
+    ctx.beginPath(); ctx.arc(X(walker.pos.x), Y(walker.pos.y), 5 * k, 0, 7); ctx.fill(); ctx.stroke();
+  }
+  ctx.save();
+  ctx.translate(X(boat.pos.x), Y(boat.pos.y));
+  ctx.rotate(-boat.heading);
+  ctx.scale(k, k);
+  ctx.fillStyle = '#ff6a4d'; ctx.strokeStyle = '#1d2533'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, 14); ctx.lineTo(8, -9); ctx.lineTo(-8, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+const mapOverlay = $('#map');
+let mapHover = null;
+const poiList = $('#map-pois');
+POI_GROUPS.forEach((g) => {
+  const h = document.createElement('h3');
+  h.textContent = g.title;
+  poiList.appendChild(h);
+  g.ids.forEach((id) => {
+    const z = zoneById[id];
+    if (!z) return;
+    const b = document.createElement('button');
+    b.className = 'poi';
+    b.innerHTML = z.card.brand ? `<i style="background:${z.card.brand.color}"></i><span></span><em></em>` : '<span></span>';
+    b.querySelector('span').textContent = poiName(z);
+    if (z.card.brand) b.querySelector('em').textContent = z.card.kicker;
+    b.addEventListener('click', () => goTo(z));
+    b.addEventListener('pointerenter', () => { mapHover = id; });
+    b.addEventListener('pointerleave', () => { mapHover = null; });
+    poiList.appendChild(b);
+    // Sous le Phare : les technologies maîtrisées, en petites pastilles (la carte sert aussi de CV rapide).
+    if (id === 'phare') {
+      const sk = document.createElement('div');
+      sk.className = 'poi-skills';
+      sk.innerHTML = SKILLS.map((g) => `<div><em>${g.group}</em>${g.items.map((i) => `<span>${i}</span>`).join('')}</div>`).join('');
+      poiList.appendChild(sk);
+    }
+  });
+});
+function openMap() { start(); mapOverlay.hidden = false; }
+function closeMap() { mapOverlay.hidden = true; }
+mm.addEventListener('click', openMap);
+$('[data-close-map]').addEventListener('click', closeMap);
+mapOverlay.addEventListener('click', (e) => { if (e.target === mapOverlay) closeMap(); });
+big.addEventListener('click', (e) => {
+  const r = big.getBoundingClientRect();
+  const W = big.width, s = mapScale(W);
+  const wx = (((e.clientX - r.left) / r.width) * W - W / 2) / s + MAP_CX;
+  const wz = (((e.clientY - r.top) / r.height) * W - W / 2) / s + MAP_CZ;
+  let best = null, bd = 60;
+  for (const z of world.zones) { const d = Math.hypot(z.x - wx, z.z - wz); if (d < bd) { bd = d; best = z; } }
+  if (best) goTo(best);
+});
+
+// Téléportation en fondu : le bateau est posé dans l'eau au plus près du lieu, cap au nord.
+function goTo(z) {
+  closeMap();
+  const fade = $('#fade');
+  fade.classList.add('on');
+  setTimeout(() => {
+    const p = new THREE.Vector2(z.x, z.z + 0.1);
+    for (let i = 0; i < 4; i++) world.collide(p, 8);
+    boat.pos.copy(p);
+    boat.heading = Math.PI;
+    boat.speed = 0;
+    // Lieu à terre : on débarque directement à côté.
+    // Lieu à terre : on pose le marin devant ce qu'il vient voir.
+    const spot = z.land && (world.landingSpot(z.land.x, z.land.z, 30) || world.landingSpot(p.x, p.y));
+    if (spot) disembark(spot);
+    else { mode = 'boat'; walker.root.visible = false; }
+    focus.set(spot ? spot.x : p.x, 0, spot ? spot.y : p.y);
+    fade.classList.remove('on');
+  }, 260);
+}
+
+// --- Régate : inscription, compte à rebours, classement, messages de règles.
+const raceHud = $('#race'), toast = $('#toast');
+let toastTimer = 0;
+const raceBtn = card.querySelector('.race-btn');
+raceBtn.addEventListener('click', () => {
+  if (boat.motor) {
+    showToast('La régate est réservée aux navigants : recharge la page et choisis « Oui, je navigue ».', 'warn');
+    return;
+  }
+  if (!race.join(boat)) showToast('Course en cours : attends la prochaine.', 'warn');
+});
+function showToast(text, kind = 'info') {
+  toast.textContent = text;
+  toast.className = `toast ${kind}`;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 4200);
+}
+const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function updateRaceUi() {
+  while (race.events.length) {
+    const e = race.events.shift();
+    if (e.kind !== 'results') showToast(e.text, e.kind);
+  }
+  if (!raceBtn.hidden) {
+    raceBtn.disabled = race.state === 'racing' || race.playerIn;
+    raceBtn.textContent = race.playerIn ? 'Inscrit ✔' : race.state === 'racing' ? 'Course en cours…' : race.state === 'countdown' ? `Rejoindre (départ dans ${Math.ceil(race.timer)} s)` : 'Participer (départ dans 30 s)';
+  }
+  const show = race.playerIn || (race.state === 'results' && race.results.some((c) => c.human));
+  raceHud.hidden = !show;
+  if (!show) return;
+  if (race.state === 'countdown') {
+    raceHud.innerHTML = `<b>🏁 Départ dans ${fmtTime(Math.ceil(race.timer))}</b><span>Reste sous la ligne (au sud) jusqu’au signal.</span>`;
+  } else if (race.state === 'racing') {
+    const st = race.standings(boat);
+    const me = st.findIndex((c) => c.human) + 1;
+    const pl = race.player;
+    const leg = pl.ocs ? 'Départ anticipé : repasse sous la ligne' : pl.phase === 'pre' ? 'Passe la ligne vers le nord' : pl.phase === 'beat' ? 'Au près → bouée jaune' : pl.phase === 'run' ? 'Au portant → ligne d’arrivée' : 'Arrivé';
+    raceHud.innerHTML = `<b>${me}<sup>${me === 1 ? 'er' : 'e'}</sup> / ${st.length} · ${fmtTime(race.clock)}</b><span>${leg}</span>`;
+  } else if (race.state === 'results') {
+    raceHud.innerHTML = `<b>🏁 Classement</b><ol>${race.standings(boat).map((c) => `<li class="${c.human ? 'me' : ''}">${c.name}${c.finished !== null ? ` <i>${fmtTime(c.finished)}</i>` : ' <i>—</i>'}</li>`).join('')}</ol>`;
+  }
+}
+
+// --- La carte des savoirs : concepts à gauche, réalisations à droite, reliés par la donnée.
+const savoirs = $('#savoirs');
+const sv = savoirs.querySelector('.sv-graph');
+sv.innerHTML = `<svg class="sv-links"></svg>
+  <div class="sv-col sv-concepts">${CONCEPTS.map((c) => `<button class="sv-node" data-c="${c.id}"><b>${c.name}</b><small>${c.hint}</small></button>`).join('')}</div>
+  <div class="sv-col sv-works">${WORKS.map((w) => `<article class="sv-work" data-w="${w.id}"><b>${w.name}</b><small>${w.where}</small>
+    <p><em>Moi</em> ${w.me}</p><p><em>L’IA</em> ${w.ai}</p>${w.zone ? `<button class="sv-go" data-zone="${w.zone}">y aller →</button>` : ''}</article>`).join('')}</div>`;
+function drawLinks(focus = null) {
+  const svg = sv.querySelector('.sv-links');
+  const box = sv.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+  let html = '';
+  for (const w of WORKS) for (const cid of w.concepts) {
+    const a = sv.querySelector(`[data-c="${cid}"]`).getBoundingClientRect();
+    const b = sv.querySelector(`[data-w="${w.id}"]`).getBoundingClientRect();
+    const x1 = a.right - box.left, y1 = a.top + a.height / 2 - box.top, x2 = b.left - box.left, y2 = b.top + b.height / 2 - box.top;
+    const on = !focus || focus === cid || focus === w.id;
+    html += `<path class="${on ? 'on' : ''}" d="M${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}"/>`;
+  }
+  svg.innerHTML = html;
+  sv.querySelectorAll('.sv-node').forEach((n) => n.classList.toggle('dim', !!focus && !(focus === n.dataset.c || WORKS.some((w) => w.id === focus && w.concepts.includes(n.dataset.c)))));
+  sv.querySelectorAll('.sv-work').forEach((n) => n.classList.toggle('dim', !!focus && !(focus === n.dataset.w || WORKS.some((w) => w.id === n.dataset.w && w.concepts.includes(focus)))));
+}
+sv.addEventListener('pointerover', (e) => {
+  const n = e.target.closest('[data-c],[data-w]');
+  drawLinks(n ? n.dataset.c || n.dataset.w : null);
+});
+sv.addEventListener('pointerleave', () => drawLinks());
+sv.addEventListener('click', (e) => {
+  const go = e.target.closest('.sv-go');
+  if (go) { savoirs.hidden = true; goTo(zoneById[go.dataset.zone]); }
+});
+function openSavoirs() { savoirs.hidden = false; requestAnimationFrame(() => drawLinks()); }
+document.querySelectorAll('[data-open-concepts]').forEach((b) => b.addEventListener('click', openSavoirs));
+savoirs.querySelector('.close').addEventListener('click', () => { savoirs.hidden = true; });
+savoirs.addEventListener('click', (e) => { if (e.target === savoirs) savoirs.hidden = true; });
+addEventListener('resize', () => { if (!savoirs.hidden) drawLinks(); });
+
+// --- L'équipe d'agents : moi au centre, les agents en orbite.
+const teamEl = $('#team-orbit');
+teamEl.innerHTML = `<div class="me-node"><b>BP</b><span>L’ingénieur · chef d’équipe</span><small>exprime le besoin · débloque · relit chaque diff · valide</small></div>`
+  + TEAM.map((a, i) => `<article class="agent" style="--i:${i};--n:${TEAM.length}"><code>${a.file}</code><b>${a.name}</b><small>quand : ${a.when}</small><p>${a.job}</p></article>`).join('');
+function openTeam() { $('#team').hidden = false; }
+function closeTeam() { $('#team').hidden = true; }
+document.querySelectorAll('[data-open-team]').forEach((b) => b.addEventListener('click', openTeam));
+$('[data-close-team]').addEventListener('click', closeTeam);
+$('#team').addEventListener('click', (e) => { if (e.target.id === 'team') closeTeam(); });
+
+// --- Intro et version rapide.
+$('#brand-name').textContent = PROFILE.name;
+$('#brand-title').textContent = PROFILE.title;
+$('#intro-name').textContent = PROFILE.name;
+$('#intro-title').textContent = `${PROFILE.title} · ${PROFILE.tagline}`;
+// Navigant : le foiler, avec le vent. Sinon (ou sans réponse) : un semi-rigide à moteur.
+const SAILOR_BY_DEFAULT = new URLSearchParams(location.search).has('navigant');
+function start(choice = SAILOR_BY_DEFAULT ? 'sail' : 'rib') {
+  if (started) return;
+  started = true;
+  $('#intro').hidden = true;
+  if (choice === 'rib') {
+    const rib = new Rib();
+    rib.pos.copy(boat.pos);
+    rib.heading = boat.heading;
+    scene.remove(boat.root);
+    scene.add(rib.root);
+    boat = rib;
+    $('.readout .small').textContent = 'semi-rigide · moteur';
+  }
+}
+$('#start-sail').addEventListener('click', () => start('sail'));
+$('#start-rib').addEventListener('click', () => start('rib'));
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+$('#cv-body').innerHTML = `
+  <p class="eyebrow">Curriculum vitae</p>
+  <h1>${esc(PROFILE.name)}</h1>
+  <p class="lead">${esc(PROFILE.title)} · ${esc(PROFILE.tagline)}</p>
+  <div class="links">${PROFILE.links.map((l) => `<a class="btn ghost" href="${esc(l.href)}">${esc(l.label)}</a>`).join('')}</div>
+  <h3>Expérience</h3>
+  ${[...EXPERIENCES].reverse().map((e) => `
+    <div class="item"><div class="when">${esc(e.dates)}</div>
+      <div><b>${esc(e.role)}</b><span>${esc(e.org)} · ${esc(e.place)}</span><p>${esc(e.body)}</p></div></div>`).join('')}
+  <h3>Formation</h3>
+  ${EDUCATION.map((e) => `
+    <div class="item"><div class="when">${esc(e.dates)}</div>
+      <div><b>${esc(e.school)}</b><span>${esc(e.degree)}</span>${e.body ? `<p>${esc(e.body)}</p>` : ''}</div></div>`).join('')}
+  <h3>Centres d’intérêt</h3>
+  ${Object.values(INTERESTS).map((i) => `
+    <div class="item"><div class="when">${esc(i.tags.join(' · '))}</div><div><b>${esc(i.title)}</b><p>${esc(i.body)}</p></div></div>`).join('')}
+`;
+function openCv() { $('#cv').hidden = false; }
+function closeCv() { $('#cv').hidden = true; }
+document.querySelectorAll('[data-open-cv]').forEach((b) => b.addEventListener('click', openCv));
+document.querySelector('[data-close-cv]').addEventListener('click', closeCv);
+$('#cv').addEventListener('click', (e) => { if (e.target.id === 'cv') closeCv(); });
+
+// --- Boucle
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+const CAM_OFFSET = new THREE.Vector3(0, 125, 82);
+// Vue d'accueil large : le nom, le bateau, la bouée « Sportif de haut niveau » et le match race.
+// Mode carte du monde (JRPG) : entre deux régions, vue d'ensemble, gros bateau, déplacement rapide.
+// C'est aussi la vue d'arrivée sur la page : on découvre tout le plan d'eau et le nom au départ.
+const OVERWORLD = { x: 25, z: -45, zoom: 8.6, boatScale: 4.6, travel: 2.4 };
+const INTRO_VIEW = { x: OVERWORLD.x, z: OVERWORLD.z, zoom: 1 };
+let ow = 1;
+let frozen = false;
+let walkZoomS = 1;
+let dayTimer = 0;
+const OVERWORLD_TRAVEL = false; // true : gros bateau + vue globale entre les régions (essai JRPG)
+const focus = new THREE.Vector3(INTRO_VIEW.x, 0, INTRO_VIEW.z);
+let zoneZoom = 1;
+camera.position.copy(focus).add(CAM_OFFSET);
+camera.lookAt(focus);
+const emitters = [];
+const clock = new THREE.Clock();
+const portrait = () => innerHeight > innerWidth;
+
+let simTime = 0;
+function frame() {
+  tick(Math.min(clock.getDelta(), 1 / 20));
+  window.__pf && window.__pf.frames++;
+  requestAnimationFrame(frame);
+}
+
+function tick(dt) {
+  simTime += dt;
+  const t = simTime;
+
+  const input = readInput();
+  if (mode === 'walk') {
+    // À terre, le bateau reste amarré là où on l'a laissé.
+    boat.update(dt, { steer: 0, power: 0, brake: true, moor: true }, world.collide);
+    walker.update(dt, readWalkInput(), world);
+  } else {
+    // Fiche ouverte et commandes lâchées : le bateau se fige en gardant sa vitesse (il repart d'un coup
+    // dès qu'on reprend la barre) et le décor passe en noir et blanc pour mettre l'information en avant.
+    frozen = started && !!activeZone && !input.any && !race.playerIn;
+    if (!frozen) boat.update(dt, input, world.collide);
+  }
+  if (mode === 'walk') frozen = false;
+  canvas.classList.toggle('frozen', frozen);
+  updateAction(dt);
+  race.update(dt, boat);
+  updateRaceUi();
+  // À pied : près d'un lieu d'intérêt on se rapproche, entre deux on recule pour voir toute la ville.
+  const walkTarget = activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? 3.4 : 1.2;
+  walkZoomS = THREE.MathUtils.damp(walkZoomS, walkTarget, 1.8, dt);
+
+  // Lumière du jour : recalculée toutes les deux secondes à partir de l'heure locale.
+  dayTimer -= dt;
+  if (dayTimer <= 0) {
+    dayTimer = 2;
+    const h = currentHour();
+    const p = applyDayNight({ scene, sun, hemi, water: world.water, beam: world.phare.beam }, h);
+    const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+    $('#clock').textContent = `${p.night > 0.5 ? '🌙' : '☀️'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+
+  // Télémétrie : toujours enregistrée, affichée et « envoyée » au phare quand on s'en approche.
+  recorder.sample(dt, t, boat);
+  const near = activeZone?.telemetry && mode === 'boat';
+  boat.root.localToWorld(mastTop.set(0, 14, 1));
+  stream.update(dt, t, mastTop, world.phare.lamp, near ? 1 : 0);
+  $('#telemetry').hidden = !near;
+  if (near) telemetry.render(t);
+  if (activeZone?.live) renderLive();
+  world.update(dt, t, boat);
+  wake.update(dt, boat.wakePoints(emitters), frozen ? 0 : boat.speed, boat.height > 0.6, innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * renderer.getPixelRatio());
+  streaks.update(dt, focus);
+
+  // Vue d'ensemble seulement à l'arrivée sur la page ; le mode « carte du monde » en navigation est désactivé.
+  const travelling = !started || (OVERWORLD_TRAVEL && mode === 'boat' && !world.inRegion(boat.pos));
+  ow = THREE.MathUtils.damp(ow, travelling ? 1 : 0, 2.2, dt);
+  boat.root.scale.setScalar(1 + (OVERWORLD.boatScale - 1) * ow);
+  boat.travel = 1 + (OVERWORLD.travel - 1) * ow;
+  $('#hint').classList.toggle('overworld', ow > 0.5);
+
+  updateZones();
+  zoneZoom = THREE.MathUtils.damp(zoneZoom, activeZone?.zoom ?? 1, 1.5, dt);
+  const ahead = boat.forward.multiplyScalar(Math.min(boat.speed, 26) * 1.1);
+  // Pendant l'intro, on cadre le bateau et le nom flottant ensemble.
+  let fx = started ? boat.pos.x + ahead.x : INTRO_VIEW.x;
+  let fz = started ? boat.pos.y + ahead.y : INTRO_VIEW.z;
+  if (mode === 'walk') { fx = walker.pos.x; fz = walker.pos.y; }
+  // Une zone peut attirer le regard vers ce qu'elle montre (le café, la piste…).
+  if (started && activeZone?.look) {
+    const w = mode === 'walk' ? 0.3 : 0.5;
+    fx += (activeZone.look.x - fx) * w;
+    fz += (activeZone.look.z - fz) * w;
+  }
+  // Mode carte du monde : on glisse vers la vue d'ensemble, centrée entre le bateau et le centre de la carte.
+  fx = THREE.MathUtils.lerp(fx, OVERWORLD.x * 0.7 + boat.pos.x * 0.3, ow);
+  fz = THREE.MathUtils.lerp(fz, OVERWORLD.z * 0.7 + boat.pos.y * 0.3, ow);
+  focus.x = THREE.MathUtils.damp(focus.x, fx, 2.5, dt);
+  focus.z = THREE.MathUtils.damp(focus.z, fz, 2.5, dt);
+  const zoom = THREE.MathUtils.lerp(
+    userZoom * (mode === 'walk' ? 0.6 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * (started ? 1 : INTRO_VIEW.zoom),
+    OVERWORLD.zoom * (portrait() ? 1.5 : 1), ow);
+  camera.position.set(focus.x + CAM_OFFSET.x * zoom, CAM_OFFSET.y * zoom, focus.z + CAM_OFFSET.z * zoom);
+  camera.lookAt(focus);
+
+  sun.position.set(focus.x - 70, 160, focus.z + 50);
+  sun.target.position.copy(focus);
+
+  $('#speed').textContent = (boat.speed * 1.944).toFixed(1);
+  $('#foiling').classList.toggle('on', boat.height > 0.8);
+  if (!boat.motor) $('#twa').textContent = Math.round(THREE.MathUtils.radToDeg(boat.twa));
+
+  renderer.render(scene, camera);
+  renderMinimap();
+  updateLabels(focus);
+  placeCard();
+  drawMap(mm);
+  if (!mapOverlay.hidden) {
+    mapRenderer.render(scene, mapCam);
+    drawMap(big, { names: true, highlight: mapHover });
+  }
+}
+requestAnimationFrame(frame);
+
+// Accès debug depuis la console.
+window.__pf = {
+  get boat() { return boat; },
+  race,
+  walker,
+  camera, world,
+  frames: 0,
+  // Avance la simulation sans requestAnimationFrame (onglet en arrière-plan, captures).
+  step(seconds, dt = 1 / 30) { for (let i = 0; i < seconds / dt; i++) tick(dt); },
+  teleport(x, z, h = boat.heading) { boat.pos.set(x, z); boat.heading = h; focus.set(x, 0, z); },
+};

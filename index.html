@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Benjamin Pajusco</title>
+  <meta name="description" content="Ingénieur Performance & IA — voile, data, simulation, agents IA.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+
+  <header class="brand">
+    <div>
+      <strong id="brand-name"></strong>
+      <span id="brand-title"></span>
+    </div>
+    <button class="btn ghost" data-open-cv>Version rapide</button>
+  </header>
+
+  <aside class="instruments" aria-label="Instruments">
+    <svg viewBox="0 0 64 64" class="compass" aria-hidden="true">
+      <circle cx="32" cy="32" r="29" />
+      <text x="32" y="12" text-anchor="middle">N</text>
+      <path class="wind" d="M32 14 L32 46 M25 39 L32 47 L39 39" />
+    </svg>
+    <div class="readout">
+      <div><b id="speed">0.0</b> nds</div>
+      <div class="small">vent du nord · TWA <span id="twa">90</span>°</div>
+      <div id="foiling" class="badge">en vol</div>
+      <div id="clock" class="small"></div>
+    </div>
+  </aside>
+
+  <canvas id="minimap" width="340" height="340" aria-label="Ouvrir la carte" title="Ouvrir la carte (M)"></canvas>
+
+  <article id="card" class="card" hidden>
+    <div class="card-head">
+      <div class="logo" hidden></div>
+      <div>
+        <div class="kicker"></div>
+        <h2></h2>
+      </div>
+    </div>
+    <div class="sub"></div>
+    <div class="tags"></div>
+    <p class="body"></p>
+    <ul class="list"></ul>
+    <div class="live" hidden><div class="step"></div><p class="txt"></p></div>
+    <div class="meta"></div>
+    <button class="btn" data-open-cv hidden>Voir le CV complet</button>
+    <button class="btn extra" data-open-team hidden>L’équipe d’agents →</button>
+    <button class="btn extra concepts-btn" data-open-concepts hidden>La carte des savoirs →</button>
+    <button class="btn race-btn" hidden>Participer (départ dans 30 s)</button>
+  </article>
+
+  <section id="map" class="overlay" hidden>
+    <div class="panel map-panel">
+      <button class="close" aria-label="Fermer" data-close-map>×</button>
+      <div class="map-stack">
+        <canvas id="map-gl"></canvas>
+        <canvas id="map-canvas" width="720" height="720"></canvas>
+      </div>
+      <nav id="map-pois" aria-label="Lieux"></nav>
+    </div>
+  </section>
+  <div id="fade"></div>
+  <div id="race" class="race-hud" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+  <aside id="telemetry" class="telemetry" hidden aria-label="Télémétrie du bateau"></aside>
+
+  <section id="savoirs" class="overlay team-overlay" hidden>
+    <div class="team-panel">
+      <button class="close" aria-label="Fermer">×</button>
+      <p class="team-tag">Le Phare des maîtrises</p>
+      <h2>Mes maîtrises, l’IA pour les mettre en œuvre.</h2>
+      <p class="team-lead">La donnée est le fil rouge. Survole une maîtrise pour voir où elle travaille, ou une réalisation pour voir ce qu’elle combine.</p>
+      <div class="sv-graph"></div>
+    </div>
+  </section>
+  <div id="stamp" hidden><svg class="geo" aria-hidden="true"></svg><div class="place"></div><div class="coords"></div><div class="dist"></div></div>
+
+  <section id="team" class="overlay team-overlay" hidden>
+    <div class="team-panel">
+      <button class="close" aria-label="Fermer" data-close-team>×</button>
+      <p class="team-tag">L’ingénieur augmenté</p>
+      <h2>Claude Code n’est pas un outil que j’utilise — c’est une équipe d’agents que je dirige.</h2>
+      <p class="team-lead">Chacun a une compétence ; moi au centre : j’exprime le besoin, je débloque, je valide.</p>
+      <div id="team-orbit" class="orbit"></div>
+    </div>
+  </section>
+
+  <button id="action" class="btn action" hidden></button>
+  <div id="hint" class="hint">← → pour tourner · ↑ accélérer · ou garde le clic enfoncé là où tu veux aller</div>
+
+  <section id="intro" class="overlay">
+    <div class="panel">
+      <p class="eyebrow">Portfolio</p>
+      <h1 id="intro-name"></h1>
+      <p id="intro-title" class="lead"></p>
+      <p>Navigue entre les bouées : chacune raconte une étape de mon parcours. L’île t’attend au nord.</p>
+      <p class="ask">Tu navigues ?</p>
+      <div class="choices">
+        <button class="choice" id="start-sail"><span class="ico">⛵</span><b>Oui, je navigue</b><small>Tu barres un foiler : le vent compte, et il vole.</small></button>
+        <button class="choice" id="start-rib"><span class="ico">🚤</span><b>Non, pas vraiment</b><small>Tu pilotes un semi-rigide : ça se conduit comme une voiture.</small></button>
+      </div>
+      <div class="keys">
+        <span><kbd>←</kbd><kbd>→</kbd> tourner</span>
+        <span><kbd>↑</kbd> accélérer</span>
+        <span><kbd>↓</kbd> freiner</span>
+        <span>🖱️ / 👆 maintenir pour aller vers un point</span>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-open-cv>Version rapide</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="cv" class="overlay" hidden>
+    <div class="panel cv">
+      <button class="close" aria-label="Fermer" data-close-cv>×</button>
+      <div id="cv-body"></div>
+    </div>
+  </section>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

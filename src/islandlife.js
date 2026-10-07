@@ -1,0 +1,347 @@
+import * as THREE from 'three';
+import { solid, rng, PALETTE } from './toon.js';
+import { person } from './characters.js';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js';
+
+
+// La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
+// Coordonnées dans le repère de construction du port (déplacées d'un bloc avec lui).
+
+const CAR_COLORS = ['#ff6a4d', '#4d7cff', '#ffc845', '#2f9e55', '#f6f1e7', '#a25dd9', '#9aa3ad'];
+
+function pine(R, y) {
+  const g = new THREE.Group();
+  const h = 4 + R() * 3;
+  g.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 1.6, 5).translate(0, y + 0.8, 0), PALETTE.wood, { outlineWidth: 0.08 }));
+  g.add(solid(new THREE.ConeGeometry(1.8 + R() * 0.6, h, 6).translate(0, y + 1.4 + h / 2, 0), R() > 0.5 ? '#4f8f4a' : PALETTE.grassDark, { outlineWidth: 0.1 }));
+  return g;
+}
+function leafy(R, y) {
+  const g = new THREE.Group();
+  g.add(solid(new THREE.CylinderGeometry(0.35, 0.45, 2.6, 5).translate(0, y + 1.3, 0), PALETTE.wood, { outlineWidth: 0.08 }));
+  g.add(solid(new THREE.IcosahedronGeometry(2.2 + R() * 1.2, 0).translate(0, y + 4.2, 0), R() > 0.5 ? '#5fa356' : '#79b85e', { outlineWidth: 0.1 }));
+  return g;
+}
+function palm(R, y) {
+  const g = new THREE.Group();
+  const h = 6 + R() * 2;
+  g.add(solid(new THREE.CylinderGeometry(0.25, 0.4, h, 5).rotateZ(0.12).translate(0.4, y + h / 2, 0), '#b08a5a', { outlineWidth: 0.06 }));
+  for (let k = 0; k < 5; k++) {
+    const leaf = solid(new THREE.BoxGeometry(0.5, 0.12, 3.2).translate(0, 0, 1.6), '#4f9a48', { outlineWidth: 0.04 });
+    leaf.position.set(0.8, y + h, 0);
+    leaf.rotation.set(0.45, (k / 5) * Math.PI * 2, 0);
+    g.add(leaf);
+  }
+  return g;
+}
+function car(color) {
+  const g = new THREE.Group();
+  g.add(solid(new THREE.BoxGeometry(2.2, 1.0, 4.2).translate(0, 0.8, 0), color, { outlineWidth: 0.05 }));
+  g.add(solid(new THREE.BoxGeometry(1.9, 0.9, 2.2).translate(0, 1.7, -0.2), '#bfe9f5', { outlineWidth: 0.04 }));
+  g.scale.setScalar(1.6);
+  return g;
+}
+function signTexture(text, bg, fg) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, 512, 128);
+  x.fillStyle = fg; x.font = 'bold 76px "Space Grotesk", sans-serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, 256, 68);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hills = [] }) {
+  const groundAt = (x, z) => {
+    for (const hl of hills) { const k = Math.hypot(x - hl.x, z - hl.z) / hl.r; if (k < 1) return hl.y + hl.h * Math.sqrt(1 - k * k) - 0.4; }
+    return top;
+  };
+  const R = rng(909);
+  const life = new THREE.Group();
+  root.add(life);
+  const Y = top;
+  const block = (x, z, hx, hz) => blocks.boxes.push({ x, z, hx, hz });
+
+  // --- Plage au nord : sable qui descend dans l'eau, parasols, serviettes, baigneurs, vagues.
+  const n = poly.pts.length;
+  const beachIdx = [];
+  for (let i = 0; i < n; i++) { const p = poly.pts[i]; if (p.y < -462 && p.x > 300 && p.x < 480) beachIdx.push(i); }
+  beachIdx.sort((a, b) => poly.pts[a].x - poly.pts[b].x);
+  const cx = poly.pts.reduce((s, p) => s + p.x, 0) / n, cz = poly.pts.reduce((s, p) => s + p.y, 0) / n;
+  const beach = beachIdx.map((i) => {
+    const p = poly.pts[i];
+    const ox = p.x - cx, oz = p.y - cz, l = Math.hypot(ox, oz);
+    return { x: p.x, z: p.y, ox: ox / l, oz: oz / l };
+  });
+  if (beach.length > 2) {
+    const pos = [], idx = [];
+    beach.forEach((b, i) => {
+      pos.push(b.x - b.ox * 2, Y + 0.08, b.z - b.oz * 2, b.x + b.ox * 14, 0.25, b.z + b.oz * 14);
+      if (i < beach.length - 1) { const k = i * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const sand = new THREE.Mesh(g, new THREE.MeshToonMaterial({ color: PALETTE.sand, side: THREE.DoubleSide }));
+    sand.receiveShadow = true;
+    life.add(sand);
+    const umbrellaCols = ['#ff6a4d', '#ffc845', '#4d7cff', '#2f9e55', '#ffffff'];
+    beach.forEach((b, i) => {
+      if (i % 2) return;
+      const x = b.x + b.ox * 6, z = b.z + b.oz * 6, y = 0.9;
+      life.add(solid(new THREE.CylinderGeometry(0.08, 0.08, 3.6, 4).translate(x, y + 1.8, z), '#ffffff', { outlineWidth: 0 }));
+      life.add(solid(new THREE.ConeGeometry(2.2, 1, 8).translate(x, y + 3.8, z), umbrellaCols[i % umbrellaCols.length], { outlineWidth: 0.05 }));
+      life.add(solid(new THREE.BoxGeometry(1.6, 0.08, 3).rotateY(R()).translate(x + 2, y + 0.05, z + 1), umbrellaCols[(i + 2) % umbrellaCols.length], { outlineWidth: 0 }));
+      if (R() < 0.6) {
+        const p = person({ shirt: umbrellaCols[(i + 1) % 5] });
+        p.scale.setScalar(S * 0.9);
+        p.rotation.x = -Math.PI / 2; // allongé au soleil
+        p.position.set(x + 2, y + 0.4, z - 1);
+        life.add(p);
+      }
+      circles.push({ x: b.x + b.ox * 10, z: b.z + b.oz * 10, r: 5 });
+    });
+    // Vagues : des rouleaux d'écume qui arrivent du large et meurent sur le sable.
+    const foam = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false });
+    for (let k = 0; k < 4; k++) {
+      const wave = new THREE.Mesh(new THREE.PlaneGeometry(1, 1.4).rotateX(-Math.PI / 2), foam.clone());
+      life.add(wave);
+      const mid = beach[Math.floor(beach.length / 2)];
+      const span = Math.hypot(beach[beach.length - 1].x - beach[0].x, beach[beach.length - 1].z - beach[0].z);
+      anim.push((dt, t) => {
+        const u = (t * 0.18 + k / 4) % 1;
+        const d = 34 - u * 22;
+        wave.position.set(mid.x + mid.ox * d, 0.3, mid.z + mid.oz * d);
+        wave.rotation.y = Math.atan2(mid.ox, mid.oz);
+        wave.scale.set(span * (0.6 + u * 0.35), 1, 1);
+        wave.material.opacity = Math.sin(u * Math.PI) * 0.85;
+      });
+    }
+  }
+
+  // --- Parc : pelouse, allées en croix, étang, bancs, arbres.
+  const park = { x: 390, z: -350, rx: 58, rz: 32 };
+  const lawn = new THREE.Mesh(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), new THREE.MeshToonMaterial({ color: PALETTE.grass }));
+  lawn.scale.set(park.rx, 1, park.rz);
+  lawn.position.set(park.x, Y + 0.05, park.z);
+  lawn.receiveShadow = true;
+  life.add(lawn);
+  life.add(solid(new THREE.BoxGeometry(park.rx * 2 - 6, 0.06, 3).translate(park.x, Y + 0.08, park.z), '#efe6d2', { outlineWidth: 0, cast: false }));
+  life.add(solid(new THREE.BoxGeometry(3, 0.06, park.rz * 2 - 6).translate(park.x, Y + 0.08, park.z), '#efe6d2', { outlineWidth: 0, cast: false }));
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(7, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#6cc6dc' }));
+  pond.position.set(park.x + 20, Y + 0.09, park.z - 9);
+  life.add(pond);
+  block(park.x + 20, park.z - 9, 7, 7);
+  for (let k = 0; k < 26; k++) {
+    const a = R() * Math.PI * 2, rr = 0.45 + R() * 0.45;
+    const x = park.x + Math.cos(a) * park.rx * rr, z = park.z + Math.sin(a) * park.rz * rr;
+    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10) continue;
+    if (blocks.boxes.some((b) => Math.abs(x - b.x) < b.hx + 2 && Math.abs(z - b.z) < b.hz + 2)) continue; // ex. la muscu
+    const t = leafy(R, Y);
+    t.position.set(x, 0, z);
+    life.add(t);
+    blocks.circles.push({ x, z, r: 1.2 });
+  }
+  for (const [dx, dz, ry] of [[-14, -4, 0], [14, 4, Math.PI], [-4, 12, Math.PI / 2], [4, -12, -Math.PI / 2]]) {
+    const b = new THREE.Group();
+    b.add(solid(new THREE.BoxGeometry(3.4, 0.3, 1).translate(0, 1, 0), PALETTE.wood, { outlineWidth: 0.04 }));
+    b.add(solid(new THREE.BoxGeometry(3.4, 1, 0.2).translate(0, 1.6, -0.45), PALETTE.wood, { outlineWidth: 0.04 }));
+    b.position.set(park.x + dx, Y, park.z + dz);
+    b.rotation.y = ry;
+    life.add(b);
+  }
+  for (const [dx, dz] of [[-park.rx + 4, 0], [park.rx - 4, 0], [0, -park.rz + 4], [0, park.rz - 4]]) {
+    const l = lampPost(Y);
+    l.position.set(park.x + dx, 0, park.z + dz);
+    life.add(l);
+  }
+
+
+  // --- Réseau routier : une boucle autour du parc et des branches vers chaque bâtiment.
+  const roadSamples = [];
+  const tanR = new THREE.Vector3();
+  const road = (pts, closed = false, w = 3.6) => {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, Y + 0.07, z)), closed, 'catmullrom', 0.5);
+    const N = Math.max(12, Math.round(curve.getLength() / 2.5));
+    const pos = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const u = closed ? (i % N) / N : i / N;
+      const p = curve.getPointAt(u);
+      curve.getTangentAt(u, tanR);
+      pos.push(p.x - tanR.z * w, Y + 0.07, p.z + tanR.x * w, p.x + tanR.z * w, Y + 0.07, p.z - tanR.x * w);
+      if (i < N) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      if (i % 2 === 0) roadSamples.push({ x: p.x, z: p.z });
+      if (i % 3 === 0 && i < N) {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 1.6).rotateX(-Math.PI / 2), roadDash);
+        m.position.set(p.x, Y + 0.12, p.z);
+        m.rotation.y = Math.atan2(tanR.x, tanR.z);
+        life.add(m);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, roadMat);
+    mesh.receiveShadow = true;
+    life.add(mesh);
+    return curve;
+  };
+  const roadMat = new THREE.MeshToonMaterial({ color: '#4b5566', side: THREE.DoubleSide });
+  const roadDash = new THREE.MeshBasicMaterial({ color: '#f6f1e7' });
+  const ring = Array.from({ length: 14 }, (_, i) => {
+    const a = (i / 14) * Math.PI * 2;
+    return [park.x + Math.cos(a) * (park.rx + 18), park.z + Math.sin(a) * (park.rz + 14)];
+  });
+  const loopRoad = road(ring, true);
+  // Carrefour : un disque d'asphalte qui comble la jonction de deux routes.
+  const junction = (x, z, r = 4.6) => {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 16).rotateX(-Math.PI / 2), roadMat);
+    m.position.set(x, Y + 0.075, z);
+    m.receiveShadow = true;
+    life.add(m);
+  };
+  // Branche qui quitte la boucle à l'angle donné, d'abord perpendiculaire, puis vers ses destinations.
+  const spur = (angle, rest) => {
+    const ax = park.x + Math.cos(angle) * (park.rx + 18), az = park.z + Math.sin(angle) * (park.rz + 14);
+    const nx = Math.cos(angle) / (park.rx + 18), nz = Math.sin(angle) / (park.rz + 14);
+    const nl = Math.hypot(nx, nz);
+    junction(ax, az);
+    road([[ax, az], [ax + (nx / nl) * 10, az + (nz / nl) * 10], ...rest]);
+    const end = rest[rest.length - 1];
+    junction(end[0], end[1], 4);
+  };
+  spur(Math.PI, [[296, -347], [287, -342]]); // vers la vieille ville
+  spur(Math.PI * 0.72, [[322, -306], [306, -304]]); // capitainerie
+  spur(Math.PI * 0.32, [[458, -307], [470, -303]]); // K-Challenge
+  spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -372], [540, -396]]); // marché, entrepôts, tour
+  spur(-Math.PI * 0.36, [[436, -410], [440, -426], [432, -432], [410, -432], [360, -431], [300, -431]]); // campus, immeubles
+
+  // Voitures et vélos sur la boucle (voitures à droite, vélos sur le bord).
+  const bike = (shirt) => {
+    const g = new THREE.Group();
+    for (const z of [-0.9, 0.9]) g.add(solid(new THREE.TorusGeometry(0.55, 0.08, 4, 10).rotateY(Math.PI / 2).translate(0, 0.6, z), '#1d2533', { outlineWidth: 0 }));
+    g.add(solid(new THREE.BoxGeometry(0.1, 0.1, 1.8).translate(0, 1.0, 0), '#e8404a', { outlineWidth: 0 }));
+    const rider = person({ shirt });
+    rider.scale.setScalar(0.85);
+    rider.position.set(0, 0.2, 0);
+    rider.userData.legs.forEach((l) => { l.rotation.x = -0.9; });
+    rider.userData.arms.forEach((a) => { a.rotation.x = -1.2; });
+    g.add(rider);
+    g.scale.setScalar(S * 0.95);
+    return g;
+  };
+  const movers = [
+    ...CAR_COLORS.slice(0, 3).map((c, i) => ({ m: car(c), off: i / 3, speed: 0.022, lane: 1.7 })),
+    ...['#ffc845', '#3ec7c2', '#ff6a4d'].map((c, i) => ({ m: bike(c), off: i / 3 + 0.15, speed: -0.009, lane: 3.4 })),
+  ];
+  for (const v of movers) {
+    life.add(v.m);
+    anim.push((dt, t) => {
+      const u = (((v.off + t * v.speed) % 1) + 1) % 1;
+      const p = loopRoad.getPointAt(u);
+      loopRoad.getTangentAt(u, tanR);
+      const dir = v.speed > 0 ? 1 : -1;
+      // À droite dans le sens de la marche.
+      v.m.position.set(p.x - tanR.z * v.lane * dir, Y, p.z + tanR.x * v.lane * dir);
+      v.m.rotation.y = Math.atan2(tanR.x * dir, tanR.z * dir);
+    });
+  }
+
+  // --- Supermarché et son parking.
+  {
+    const sx = 500, sz = -352;
+    const g = new THREE.Group();
+    g.position.set(sx, Y, sz);
+    g.add(solid(new THREE.BoxGeometry(36, 8, 20).translate(0, 4, 0), '#eef1f4', { outlineWidth: 0.15 }));
+    g.add(solid(new THREE.BoxGeometry(36.4, 1.6, 20.4).translate(0, 7.4, 0), '#2f9e55', { outlineWidth: 0.08 }));
+    g.add(solid(new THREE.BoxGeometry(14, 4.5, 0.3).translate(0, 2.3, 10.1), '#bfe9f5', { outlineWidth: 0.05 }));
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), new THREE.MeshBasicMaterial({ map: signTexture('MARCHÉ', '#2f9e55', '#ffffff') }));
+    sign.position.set(0, 10.2, 10.25);
+    g.add(sign);
+    g.add(solid(new THREE.BoxGeometry(14.4, 4, 0.3).translate(0, 10.2, 10.05), '#1d2533', { outlineWidth: 0.04 }));
+    life.add(g);
+    block(sx, sz, 18.5, 10.5);
+    // Parking : bitume, lignes blanches, voitures garées, chariots.
+    life.add(solid(new THREE.BoxGeometry(58, 0.08, 18).translate(510, Y + 0.05, -317), '#4b5566', { outlineWidth: 0, cast: false }));
+    const line = new THREE.MeshBasicMaterial({ color: '#f6f1e7' });
+    for (let k = 0; k <= 9; k++) {
+      for (const side of [-1, 1]) {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 6).rotateX(-Math.PI / 2), line);
+        m.position.set(484 + k * 5.8, Y + 0.1, -317 + side * 5);
+        life.add(m);
+      }
+      if (k < 9) for (const side of [-1, 1]) {
+        if (R() < 0.35) continue;
+        const c = car(CAR_COLORS[Math.floor(R() * CAR_COLORS.length)]);
+        c.position.set(486.9 + k * 5.8, Y, -317 + side * 5);
+        c.rotation.y = side > 0 ? Math.PI : 0;
+        life.add(c);
+        blocks.boxes.push({ x: 486.9 + k * 5.8, z: -317 + side * 5, hx: 1.8, hz: 3.4 });
+      }
+    }
+  }
+
+  // --- Immeubles d'habitation au nord, tour de bureaux et entrepôts à l'est.
+  const flatCols = ['#f4dcd6', '#e7eef4', '#f2d7b6', '#e9f0dc'];
+  for (let k = 0; k < 5; k++) {
+    const x = 316 + k * 26, z = -446, h = 12 + R() * 8;
+    const g = new THREE.Group();
+    g.position.set(x, Y, z);
+    g.add(solid(new THREE.BoxGeometry(16, h, 10).translate(0, h / 2, 0), flatCols[k % 4], { outlineWidth: 0.15 }));
+    for (let f = 1; f < h / 3.2; f++) g.add(solid(new THREE.BoxGeometry(16.6, 0.3, 11).translate(0, f * 3.2, 0.4), '#ffffff', { outlineWidth: 0 }));
+    for (let w = -1; w <= 1; w++) for (let f = 0; f < h / 3.2 - 1; f++) g.add(solid(new THREE.BoxGeometry(2.2, 1.4, 0.2).translate(w * 5, 1.8 + f * 3.2, 5.05), '#4aa4de', { outlineWidth: 0 }));
+    g.add(solid(new THREE.BoxGeometry(16.4, 0.8, 10.4).translate(0, h + 0.4, 0), '#55657a', { outlineWidth: 0.06 }));
+    life.add(g);
+    block(x, z, 8.5, 5.5);
+  }
+  {
+    const g = new THREE.Group();
+    g.position.set(553, Y, -408);
+    g.add(solid(new THREE.BoxGeometry(12, 34, 12).translate(0, 17, 0), '#3c4a5c', { outlineWidth: 0.15 }));
+    for (let f = 1; f < 11; f++) g.add(solid(new THREE.BoxGeometry(12.4, 0.5, 12.4).translate(0, f * 3.1, 0), '#4aa4de', { outlineWidth: 0 }));
+    g.add(solid(new THREE.BoxGeometry(6, 3, 6).translate(0, 35.5, 0), '#9aa3ad', { outlineWidth: 0.08 }));
+    life.add(g);
+    block(553, -408, 6.5, 6.5);
+  }
+  for (let k = 0; k < 2; k++) {
+    const x = 560, z = -340 + k * 26;
+    const g = new THREE.Group();
+    g.position.set(x, Y, z);
+    g.add(solid(new THREE.BoxGeometry(20, 9, 18).translate(0, 4.5, 0), '#c9b8a0', { outlineWidth: 0.14 }));
+    g.add(solid(new THREE.CylinderGeometry(9.5, 9.5, 20, 10, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2).scale(1, 0.35, 1).translate(0, 9, 0), '#8a9aa8', { outlineWidth: 0.1 }));
+    g.add(solid(new THREE.BoxGeometry(6, 6, 0.3).translate(-4, 3, 9.1), '#5a6b7c', { outlineWidth: 0.05 }));
+    life.add(g);
+    block(x, z, 10.5, 9.5);
+  }
+
+  // --- Arbres un peu partout sur l'île, là où il reste de la place (pins, feuillus, palmiers près de l'eau).
+  const free = (x, z, r) => {
+    if (!insidePoly(poly.pts, x, z)) return false;
+    if (nearestOnPoly(poly.pts, x, z).d < 13) return false; // laisse la corniche libre
+    if (Math.hypot((x - park.x) / park.rx, (z - park.z) / park.rz) < 1.05) return false;
+    if (z > -290) return false; // front de mer
+    if (roadSamples.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
+    for (const b of blocks.boxes) if (Math.abs(x - b.x) < b.hx + r && Math.abs(z - b.z) < b.hz + r) return false;
+    for (const c of blocks.circles) if (Math.hypot(x - c.x, z - c.z) < c.r + r) return false;
+    return true;
+  };
+  let planted = 0;
+  for (let k = 0; k < 1400 && planted < 170; k++) {
+    const x = 170 + R() * 420, z = -485 + R() * 200;
+    if (!free(x, z, 3)) continue;
+    const kind = R();
+    const nearSea = nearestOnPoly(poly.pts, x, z).d < 22;
+    const gy = groundAt(x, z);
+    const t = nearSea && kind < 0.6 ? palm(R, gy) : kind < 0.5 ? pine(R, gy) : leafy(R, gy);
+    t.position.set(x, 0, z);
+    t.rotation.y = R() * 6;
+    life.add(t);
+    blocks.circles.push({ x, z, r: 1.3 });
+    planted++;
+  }
+}
