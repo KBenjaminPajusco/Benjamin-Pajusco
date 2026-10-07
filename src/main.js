@@ -10,15 +10,19 @@ import { renderGeoMap, renderRegattaMap } from './geomap.js';
 import { DataStream, Recorder, TelemetryPanel } from './telemetry.js';
 import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js';
 import { Race, COURSE } from './race.js';
+import { StaticMerger } from './optimize.js';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 // --- Rendu
 const canvas = $('#scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia('(max-width: 640px)').matches ? 1.5 : 2)); // plus léger sur téléphone
-renderer.shadowMap.enabled = true;
+// Téléphone (portrait, ou paysage avec écran tactile) : rendu allégé et interface compacte.
+const MOBILE_MQ = matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 950px)');
+const IS_MOBILE = MOBILE_MQ.matches;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_MOBILE, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_MOBILE ? 1.25 : 2)); // plus léger sur téléphone
+renderer.shadowMap.enabled = !IS_MOBILE; // pas d'ombres portées sur téléphone
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
@@ -62,6 +66,8 @@ scene.add(walker.root);
 const stream = new DataStream();
 scene.add(stream.mesh);
 const recorder = new Recorder();
+// Fusion du décor immobile après quelques secondes (gros gain de fluidité, surtout sur téléphone).
+const merger = new StaticMerger(scene, { exclude: [walker.root, stream.mesh, wake.points] });
 const telemetry = new TelemetryPanel($('#telemetry'), recorder);
 const mastTop = new THREE.Vector3();
 let mode = 'boat'; // 'boat' | 'walk'
@@ -354,7 +360,7 @@ function showRegattas() {
   stamp.hidden = false;
   stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show');
 }
-const docked = () => innerWidth < 640;
+const docked = () => MOBILE_MQ.matches;
 function placeCard() {
   if (!activeZone) return;
   card.classList.toggle('docked', docked());
@@ -413,17 +419,33 @@ const mapRenderer = new THREE.WebGLRenderer({ canvas: $('#map-gl'), antialias: t
 mapRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 mapRenderer.setSize(720, 720, false);
 
-function renderMinimap() {
+const miniTarget = new THREE.WebGLRenderTarget(256, 256);
+miniTarget.texture.colorSpace = THREE.SRGBColorSpace;
+const miniScene = new THREE.Scene();
+const miniCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+miniScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: miniTarget.texture, toneMapped: false })));
+let miniAge = 1e9;
+function renderMinimap(dt) {
+  miniAge += dt;
+  if (miniAge > 0.4) {
+    // Le monde vu d'en haut, recalculé ~2,5 fois par seconde seulement.
+    miniAge = 0;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.setRenderTarget(miniTarget);
+    renderer.render(scene, mapCam);
+    renderer.setRenderTarget(null);
+    renderer.shadowMap.autoUpdate = true;
+  }
   const r = mm.getBoundingClientRect();
   const y = innerHeight - r.bottom;
-  renderer.shadowMap.autoUpdate = false; // les ombres de la vue principale suffisent
+  renderer.autoClear = false;
   renderer.setScissorTest(true);
   renderer.setViewport(r.left, y, r.width, r.height);
   renderer.setScissor(r.left, y, r.width, r.height);
-  renderer.render(scene, mapCam);
+  renderer.render(miniScene, miniCam);
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, innerWidth, innerHeight);
-  renderer.shadowMap.autoUpdate = true;
+  renderer.autoClear = true;
 }
 
 // Calque 2D au-dessus du rendu 3D : bateau, marin, noms des lieux.
@@ -801,7 +823,8 @@ function tick(dt) {
   if (!boat.motor) $('#twa').textContent = Math.round(THREE.MathUtils.radToDeg(boat.twa));
 
   renderer.render(scene, camera);
-  renderMinimap();
+  renderMinimap(dt);
+  merger.update(simTime);
   updateLabels(focus);
   placeCard();
   // Hauteur du tiroir (mobile) : le bouton d'action et les messages se placent au-dessus.

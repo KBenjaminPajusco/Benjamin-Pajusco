@@ -154,6 +154,7 @@ export function buildCafe({ root, anim, labels, blocks, qTop, S }) {
       ud.screens.push(led);
       const paper = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
       paper.position.set(0, 2.0, 1.2);
+      paper.userData.dynamic = true; // bouge pendant l'impression : jamais fusionné
       g.add(paper);
       ud.paper = paper;
       blocks.boxes.push({ x, z, hx: 2.4, hz: 2 });

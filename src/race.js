@@ -24,6 +24,7 @@ function committeeBoat() {
   const flag = solid(new THREE.BoxGeometry(0.05, 1.2, 1.8).translate(0, 6.4, 2.9), '#ff6a4d', { outlineWidth: 0 });
   g.add(flag);
   g.userData.flag = flag;
+  flag.userData.dynamic = true; // pavillon amené au départ
   return g;
 }
 function bigMark(color) {

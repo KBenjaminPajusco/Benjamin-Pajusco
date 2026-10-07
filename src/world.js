@@ -850,6 +850,20 @@ export function buildWorld(scene) {
   }
   // Point de débarquement le plus proche autour du bateau.
   function landingSpot(x, z, maxR = 24) {
+    // D'abord le rivage le plus proche de l'île, puis quelques pas vers l'intérieur.
+    for (const p of land.polys) {
+      const q = nearestOnPoly(p.pts, x, z);
+      if (q.d > maxR) continue;
+      const inside = insidePoly(p.pts, x, z);
+      const dx = (q.x - x) * (inside ? -1 : 1), dz = (q.z - z) * (inside ? -1 : 1), l = Math.hypot(dx, dz) || 1;
+      for (const step of [3, 5, 8, 12, 16]) {
+        for (const side of [0, -6, 6, -12, 12]) {
+          const px = q.x + (dx / l) * step - (dz / l) * side, pz = q.z + (dz / l) * step + (dx / l) * side;
+          if (walkable(px, pz, 1.5)) return new THREE.Vector2(px, pz);
+        }
+      }
+    }
+    maxR = Math.min(maxR, 24);
     for (let r = 3; r <= maxR; r += 1.5) {
       for (let k = 0; k < 24; k++) {
         const a = (k / 24) * Math.PI * 2;

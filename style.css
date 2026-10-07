@@ -438,8 +438,8 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .poi-skills em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; min-width: 64px; }
 .poi-skills span { font-size: 11px; border: 1.5px solid #00a6c8; color: #0a5566; border-radius: 999px; padding: 0 7px; background: #e6f9fd; }
 
-/* ============ Version téléphone ============ */
-@media (max-width: 640px) {
+/* ============ Version téléphone (portrait, ou paysage tactile) ============ */
+@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) {
   /* En-tête et instruments : compacts, sur une ligne. */
   .brand { top: 8px; left: 8px; padding: 4px 4px 4px 9px; gap: 6px; border-radius: 10px; max-width: calc(100vw - 132px); }
   .brand strong { font-size: 12px; white-space: nowrap; }
@@ -527,4 +527,20 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .team-panel { padding: 16px 14px 18px; }
   .team-panel h2 { font-size: 22px; }
   .cv { padding: 18px 14px; }
+}
+
+@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) {
+  /* La carte géographique se pose juste au-dessus du tiroir de fiche, à gauche : plus de chevauchement. */
+  #stamp { top: auto; right: auto; left: 8px; bottom: calc(var(--sheet-h, 0px) + 10px); width: 150px; }
+  #stamp.regattas { width: 180px; }
+  #stamp.simple { width: auto; }
+  .telemetry { max-height: 26vh; }
+  .action { right: 10px; left: auto; transform: none; }
+  .action:hover, .action:active { transform: none; }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  /* Téléphone en paysage : tiroir plus bas, panneaux plus courts. */
+  .card.docked { max-height: 46vh; left: auto; width: min(420px, 60vw); }
+  .telemetry { max-height: 40vh; }
+  #intro .panel { max-height: calc(100vh - 16px); overflow: auto; }
 }

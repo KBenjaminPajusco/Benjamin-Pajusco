@@ -17,6 +17,44 @@ export function makeWater(shores, boxes, segs = [], tints = [], poly = []) {
   const tintPos = [0, 1].map((i) => (tints[i] ? new THREE.Vector3(tints[i].x, tints[i].z, tints[i].r) : new THREE.Vector3(1e5, 1e5, 1)));
   const tintCol = [0, 1].map((i) => new THREE.Color(tints[i]?.color || '#000000'));
 
+  // Champ de distance au rivage (îles, quai, digues, bouées), calculé une seule fois sur le CPU.
+  const FIELD = { x0: -620, z0: -620, size: 1240, res: 512, max: 40 };
+  const data = new Uint8Array(FIELD.res * FIELD.res * 2); // R : terre, G : bouées
+  const segDist = (px, pz, ax, az, bx, bz) => {
+    const abx = bx - ax, abz = bz - az;
+    const t = Math.max(0, Math.min(1, ((px - ax) * abx + (pz - az) * abz) / (abx * abx + abz * abz || 1)));
+    return Math.hypot(px - ax - abx * t, pz - az - abz * t);
+  };
+  const near = (cx, cz, r) => (px, pz) => Math.abs(px - cx) < r + FIELD.max && Math.abs(pz - cz) < r + FIELD.max;
+  const landCircles = shores.filter((c) => c.r > 0), buoyCircles = shores.filter((c) => c.r < 0);
+  const polyB = poly.length ? poly.reduce((b, p) => ({ x0: Math.min(b.x0, p.x), x1: Math.max(b.x1, p.x), z0: Math.min(b.z0, p.y), z1: Math.max(b.z1, p.y) }), { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 }) : null;
+  for (let j = 0; j < FIELD.res; j++) {
+    const pz = FIELD.z0 + ((j + 0.5) / FIELD.res) * FIELD.size;
+    for (let i = 0; i < FIELD.res; i++) {
+      const px = FIELD.x0 + ((i + 0.5) / FIELD.res) * FIELD.size;
+      let d = FIELD.max, db = FIELD.max;
+      for (const c of landCircles) if (near(c.x, c.z, c.r)(px, pz)) d = Math.min(d, Math.hypot(px - c.x, pz - c.z) - c.r);
+      for (const c of buoyCircles) if (near(c.x, c.z, -c.r)(px, pz)) db = Math.min(db, Math.hypot(px - c.x, pz - c.z) + c.r);
+      for (const b of boxes) {
+        const qx = Math.abs(px - b.x) - b.hx, qz = Math.abs(pz - b.z) - b.hz;
+        d = Math.min(d, Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0));
+      }
+      for (const g of segs) d = Math.min(d, segDist(px, pz, g[0], g[1], g[2], g[3]) - 3.5);
+      if (polyB && px > polyB.x0 - FIELD.max && px < polyB.x1 + FIELD.max && pz > polyB.z0 - FIELD.max && pz < polyB.z1 + FIELD.max) {
+        for (let k = 0; k < poly.length; k++) {
+          const p = poly[k], q = poly[(k + 1) % poly.length];
+          d = Math.min(d, segDist(px, pz, p.x, p.y, q.x, q.y));
+        }
+      }
+      const o = (j * FIELD.res + i) * 2;
+      data[o] = Math.round(THREE.MathUtils.clamp(d, 0, FIELD.max) / FIELD.max * 255);
+      data[o + 1] = Math.round(THREE.MathUtils.clamp(db, 0, FIELD.max) / FIELD.max * 255);
+    }
+  }
+  const distTex = new THREE.DataTexture(data, FIELD.res, FIELD.res, THREE.RGFormat, THREE.UnsignedByteType);
+  distTex.minFilter = distTex.magFilter = THREE.LinearFilter;
+  distTex.needsUpdate = true;
+
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -29,8 +67,8 @@ export function makeWater(shores, boxes, segs = [], tints = [], poly = []) {
       uSegs: { value: segments },
       uTintPos: { value: tintPos },
       uTintCol: { value: tintCol },
-      uPoly: { value: polyPts },
-      uPolyN: { value: Math.min(poly.length, 96) },
+      uDist: { value: distTex },
+      uField: { value: new THREE.Vector4(FIELD.x0, FIELD.z0, FIELD.size, FIELD.max) },
     },
     vertexShader: /* glsl */`
       varying vec2 vP;
@@ -47,8 +85,8 @@ export function makeWater(shores, boxes, segs = [], tints = [], poly = []) {
       uniform vec4 uSegs[4];
       uniform vec3 uTintPos[2];
       uniform vec3 uTintCol[2];
-      uniform vec2 uPoly[96];
-      uniform int uPolyN;
+      uniform sampler2D uDist;
+      uniform vec4 uField;
       varying vec2 vP;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise(vec2 p) {
@@ -57,28 +95,10 @@ export function makeWater(shores, boxes, segs = [], tints = [], poly = []) {
         return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
       }
       void main() {
-        // r < 0 = bouée : ourlet d'écume mais pas de haut-fond.
-        float d = 1e5, dBuoy = 1e5;
-        for (int i = 0; i < ${MAX_SHORE}; i++) {
-          float di = length(vP - uCircles[i].xy) - abs(uCircles[i].z);
-          if (uCircles[i].z < 0.0) dBuoy = min(dBuoy, di); else d = min(d, di);
-        }
-        for (int i = 0; i < 4; i++) {
-          vec2 q = abs(vP - uRects[i].xy) - uRects[i].zw;
-          d = min(d, length(max(q, 0.0)) + min(max(q.x, q.y), 0.0));
-        }
-        for (int i = 0; i < 96; i++) {
-          if (i >= uPolyN) break;
-          vec2 a = uPoly[i], b = uPoly[i + 1 < uPolyN ? i + 1 : 0];
-          vec2 ba = b - a, pa = vP - a;
-          float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-3), 0.0, 1.0);
-          d = min(d, length(pa - ba * h));
-        }
-        for (int i = 0; i < 4; i++) {
-          vec2 a = uSegs[i].xy, ba = uSegs[i].zw - a, pa = vP - a;
-          float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-3), 0.0, 1.0);
-          d = min(d, length(pa - ba * h) - 3.5);
-        }
+        // Distance au rivage lue dans le champ précalculé (R : terre, G : bouées).
+        vec2 dist = texture2D(uDist, (vP - uField.xy) / uField.z).rg * uField.w;
+        float d = dist.r, dBuoy = dist.g;
+        if (abs(vP.x) > 610.0 || abs(vP.y) > 610.0) { d = uField.w; dBuoy = uField.w; }
         float n = noise(vP * 0.012 + vec2(uTime * 0.02, uTime * 0.035)) * 0.65 + noise(vP * 0.04 - uTime * 0.05) * 0.35;
         vec3 col = mix(uDeep, uSea, step(0.42, n));
         for (int i = 0; i < 2; i++) {
