@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008134250';
-import { makeWater } from './effects.js?v=20261008134250';
-import { person } from './characters.js?v=20261008134250';
-import { buildCafe } from './cafe.js?v=20261008134250';
-import { buildMatchRace } from './matchrace.js?v=20261008134250';
-import { buildPhare } from './phare.js?v=20261008134250';
-import { Boat } from './boat.js?v=20261008134250';
-import { buildDecor } from './decor.js?v=20261008134250';
-import { buildTown } from './town.js?v=20261008134250';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008134250';
-import { buildIslandLife } from './islandlife.js?v=20261008134250';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008134250';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008144522';
+import { makeWater } from './effects.js?v=20261008144522';
+import { person } from './characters.js?v=20261008144522';
+import { buildCafe } from './cafe.js?v=20261008144522';
+import { buildMatchRace } from './matchrace.js?v=20261008144522';
+import { buildPhare } from './phare.js?v=20261008144522';
+import { Boat } from './boat.js?v=20261008144522';
+import { buildDecor } from './decor.js?v=20261008144522';
+import { buildTown } from './town.js?v=20261008144522';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008144522';
+import { buildIslandLife } from './islandlife.js?v=20261008144522';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008144522';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -445,7 +445,8 @@ export function buildWorld(scene) {
       const wx = x + px, wz = z + pz;
       const { noTree, plate, flat, parking, lawn } = campusKit(c, wx, wz);
       // Côté sud : entre la route nord et la route en anneau, sans déborder sur l'une ni l'autre.
-      lawn([[-30, -12], [-12, -13], [16, -13], [27, -9], [26, 6], [14, 15], [2, 25], [-18, 26], [-29, 17], [-32, 2]]);
+      // Côté sud raccourci : à l'est, la route du parc remonte plus au nord.
+      lawn([[-30, -12], [-12, -13], [16, -13], [27, -9], [26, 5], [14, 10], [2, 12.5], [-18, 12.5], [-29, 10], [-32, 2]]);
       // Sol : parvis et cheminements.
       flat(14, 8, -12, 8, pave);                 // parvis devant IRESTE
       flat(3, 12, -18, -10, pave);               // vers la route et la rotonde
@@ -507,7 +508,6 @@ export function buildWorld(scene) {
       plate('IHT', 3.4, HX, 3.6, HZ + HL / 2 + 0.06);
 
       // Parkings entre les bâtiments, comme sur la photo.
-      parking(-6, 17, 5, 1);
       parking(rx + 22, rz - 11, 5, 1);
       // Totem, bancs et arceaux à vélos sur le parvis.
       c.add(solid(new THREE.BoxGeometry(1.2, 3.2, 2.6).translate(-17, 1.6, 6), blue, { outlineWidth: 0.08 }));
@@ -515,7 +515,7 @@ export function buildWorld(scene) {
         const bench = solid(new THREE.BoxGeometry(2.6, 0.35, 0.8).translate(0, 0.75, 0), PALETTE.wood, { outlineWidth: 0.05 });
         bench.position.set(bx, 0, bz); bench.rotation.y = r; c.add(bench);
       }
-      for (let k = 0; k < 4; k++) c.add(solid(new THREE.TorusGeometry(0.55, 0.07, 4, 10, Math.PI).translate(-19.5 - k * 1.1, 0.1, 13.6).rotateY(0), grey, { outlineWidth: 0 }));
+      for (let k = 0; k < 4; k++) c.add(solid(new THREE.TorusGeometry(0.55, 0.07, 4, 10, Math.PI).translate(-21 - k * 1.1, 0.1, 9.5).rotateY(0), grey, { outlineWidth: 0 }));
 
       // Collisions, étiquette et zone : la fiche s'ouvre au cœur du campus.
       blocks.boxes.push(
@@ -758,8 +758,9 @@ export function buildWorld(scene) {
     const S = 2.4; // personnages agrandis pour rester lisibles depuis la caméra haute
 
     // Campus : les écoles, au nord du quai.
-    buildCampus(380, -412, qTop, { polytech: [-48, 0], ronarch: [4, 0], guelph: [54, 2] });
-    labels.push({ pos: new THREE.Vector3(382, qTop + 32, -432), html: 'Formation', cls: 'label-region label-cat' }); // titre de la catégorie, au-dessus des écoles
+    // D'ouest en est : GCVI, le lycée, puis Polytech, le premier qu'on rencontre en arrivant par la route.
+    buildCampus(380, -412, qTop, { polytech: [42, -2], ronarch: [-24, 0], guelph: [-68, 2] });
+    labels.push({ pos: new THREE.Vector3(368, qTop + 32, -440), html: 'Formation', cls: 'label-region label-cat' }); // titre de la catégorie, au-dessus des écoles
 
     // K-Challenge : mon poste actuel, au bord de l'eau, avec un foiler amarré devant.
     {
