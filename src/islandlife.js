@@ -330,6 +330,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     if (roadSamples.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
     for (const b of blocks.boxes) if (Math.abs(x - b.x) < b.hx + r && Math.abs(z - b.z) < b.hz + r) return false;
     for (const c of blocks.circles) if (Math.hypot(x - c.x, z - c.z) < c.r + r) return false;
+    for (const b of blocks.noTree || []) if (Math.abs(x - b.x) < b.hx + r && Math.abs(z - b.z) < b.hz + r) return false; // parvis, places
     return true;
   };
   let planted = 0;
