@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008120735';
-import { makeWater } from './effects.js?v=20261008120735';
-import { person } from './characters.js?v=20261008120735';
-import { buildCafe } from './cafe.js?v=20261008120735';
-import { buildMatchRace } from './matchrace.js?v=20261008120735';
-import { buildPhare } from './phare.js?v=20261008120735';
-import { Boat } from './boat.js?v=20261008120735';
-import { buildDecor } from './decor.js?v=20261008120735';
-import { buildTown } from './town.js?v=20261008120735';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008120735';
-import { buildIslandLife } from './islandlife.js?v=20261008120735';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008120735';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008134250';
+import { makeWater } from './effects.js?v=20261008134250';
+import { person } from './characters.js?v=20261008134250';
+import { buildCafe } from './cafe.js?v=20261008134250';
+import { buildMatchRace } from './matchrace.js?v=20261008134250';
+import { buildPhare } from './phare.js?v=20261008134250';
+import { Boat } from './boat.js?v=20261008134250';
+import { buildDecor } from './decor.js?v=20261008134250';
+import { buildTown } from './town.js?v=20261008134250';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008134250';
+import { buildIslandLife } from './islandlife.js?v=20261008134250';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008134250';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -272,15 +272,20 @@ export function buildWorld(scene) {
     { x: LAYOUT.phare.x - 38, z: LAYOUT.phare.z + 12 }, // on passe au pied du phare
     harbourMouth, kcBerth,
   ];
-  const dots = [];
+  // Tracé du parcours : tirets orientés dans le sens de la route, blancs sur un liseré sombre (lisibles même de loin, sur téléphone).
+  const dashes = [], rims = [];
   for (let i = 0; i < chenal.length - 1; i++) {
     const a = chenal[i], b = chenal[i + 1];
-    for (let k = 1; k < 8; k++) {
-      const t = k / 8;
-      dots.push(new THREE.CircleGeometry(0.7, 6).rotateX(-Math.PI / 2).translate(THREE.MathUtils.lerp(a.x, b.x, t), 0.12, THREE.MathUtils.lerp(a.z, b.z, t)));
+    const len = Math.hypot(b.x - a.x, b.z - a.z), ang = Math.atan2(b.x - a.x, b.z - a.z);
+    const n = Math.max(3, Math.floor(len / 9));
+    for (let k = 1; k < n; k++) {
+      const t = k / n, x = THREE.MathUtils.lerp(a.x, b.x, t), z = THREE.MathUtils.lerp(a.z, b.z, t);
+      dashes.push(new THREE.PlaneGeometry(1.3, 3.6).rotateX(-Math.PI / 2).rotateY(ang).translate(x, 0.14, z));
+      rims.push(new THREE.PlaneGeometry(2.1, 4.4).rotateX(-Math.PI / 2).rotateY(ang).translate(x, 0.12, z));
     }
   }
-  root.add(new THREE.Mesh(mergeGeometries(dots), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })));
+  root.add(new THREE.Mesh(mergeGeometries(rims), new THREE.MeshBasicMaterial({ color: '#1d2533', transparent: true, opacity: 0.28, depthWrite: false })));
+  root.add(new THREE.Mesh(mergeGeometries(dashes), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.95, depthWrite: false })));
   labels.push({ pos: new THREE.Vector3(40, 2, 106), html: 'Mon parcours <em>→</em>', cls: 'label-hint' });
 
   EXPERIENCES.forEach((exp, i) => {

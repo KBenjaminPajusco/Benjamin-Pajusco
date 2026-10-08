@@ -682,15 +682,17 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .picker-foot .keys { margin: 0; }
 @media (max-width: 640px), (pointer: coarse) and (max-width: 950px) and (orientation: portrait) {
   /* Portrait : les deux véhicules l'un au-dessus de l'autre. */
-  .picker { grid-template-columns: 1fr; grid-template-rows: auto 1fr 1fr auto; }
+  .picker { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .picker-head { position: absolute; top: 0; left: 0; right: 0; }
+  .picker-foot { position: absolute; bottom: 0; left: 0; right: 0; }
   .picker-head { padding-top: 14px; background: linear-gradient(#fff6e8, rgba(255, 246, 232, 0)); }
   .picker-head h1 { font-size: 28px; }
   .picker-lead { font-size: 12.5px; }
   .pick { grid-row: auto; grid-template-rows: 1fr auto; }
-  .pick-sail { grid-column: 1; grid-row: 1 / 3; }
-  .pick-rib { grid-column: 1; grid-row: 3 / 5; border-left: 0; border-top: 3px solid var(--ink); }
+  .pick-sail { grid-column: 1; grid-row: 1; padding-top: 86px; }
+  .pick-rib { grid-column: 1; grid-row: 2; border-left: 0; border-top: 3px solid var(--ink); }
   .pick-info { padding: 0 12px 12px; gap: 3px; }
-  .pick-rib .pick-info { padding-bottom: 58px; }
+  .pick-rib .pick-info { padding-bottom: 14px; }
   .pick-info small { font-size: 12px; }
   .stats { display: none; }
   .go { padding: 7px 16px; font-size: 13px; margin-top: 4px; }
@@ -710,3 +712,25 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 /* Titres de catégories sur l'île (Formation, Emploi, Centres d'intérêt) : style des grandes zones, un peu plus petit. */
 .label-region.label-cat { font-size: 20px; padding: 2px 12px 3px; }
 @media (max-width: 640px), (pointer: coarse) and (max-width: 950px) { .label-region.label-cat { font-size: 13px; padding: 1px 8px; border-width: 2px; } }
+
+/* Troisième option, entre les deux véhicules : le CV classique. */
+.pick-cv { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); z-index: 3; width: 150px; height: 150px; border-radius: 50%;
+  background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 6px 0 rgba(29, 37, 51, .3); display: grid; place-content: center; gap: 2px;
+  text-align: center; cursor: pointer; font: inherit; color: var(--ink); transition: transform .15s, background .15s; }
+.pick-cv:hover { transform: translate(-50%, -50%) scale(1.06); background: #fff; }
+.pick-cv .or { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); }
+.pick-cv b { font-size: 18px; line-height: 1.1; }
+.pick-cv small { font-size: 12px; color: var(--ink-soft); }
+#cv { z-index: 7; }
+@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) and (orientation: portrait) {
+  /* Portrait : une pastille « ou · CV classique » posée pile sur la séparation des deux moitiés. */
+  .pick-cv { top: 50%; width: auto; height: auto; border-radius: 999px; padding: 8px 18px; display: flex; align-items: baseline; gap: 6px; border-width: 2.5px; }
+  .pick-cv b { font-size: 15px; }
+  .pick-cv small { display: none; }
+  .pick-sail .pick-info { padding-bottom: 34px; }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  .pick-cv { width: 100px; height: 100px; }
+  .pick-cv b { font-size: 14px; }
+  .pick-cv small { display: none; }
+}
