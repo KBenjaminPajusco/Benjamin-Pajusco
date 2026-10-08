@@ -99,7 +99,7 @@ canvas#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: bl
 .card.docked::after { display: none; }
 
 #minimap { cursor: zoom-in; transition: transform .15s; }
-#minimap:hover { transform: scale(1.04); }
+#minimap:hover { box-shadow: 0 0 0 3px var(--accent); }
 .panel.map-panel { width: min(1040px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; }
 #map-canvas { width: 100%; aspect-ratio: 1; border: 2px solid var(--ink); border-radius: var(--radius); cursor: pointer; }
 #map-pois { overflow: auto; max-height: min(720px, calc(100vh - 90px)); padding-right: 4px; }

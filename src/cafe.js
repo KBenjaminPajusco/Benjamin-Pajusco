@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon } from './toon.js?v=20261008114723';
-import { person } from './characters.js?v=20261008114723';
+import { solid, toon } from './toon.js?v=20261008115124';
+import { person } from './characters.js?v=20261008115124';
 
 // La boucle d'autofix, mise en scène dans l'open space des agents :
 // un ticket passe de poste en poste, de la plainte de l'utilisateur jusqu'à ma décision.

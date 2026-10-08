@@ -1,16 +1,16 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008114723';
-import { buildWorld, LAYOUT } from './world.js?v=20261008114723';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008114723';
-import { Walker } from './walker.js?v=20261008114723';
-import { Rib } from './rib.js?v=20261008114723';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008114723';
-import { STEPS, TEAM } from './cafe.js?v=20261008114723';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008114723';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008114723';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008114723';
-import { Race, COURSE } from './race.js?v=20261008114723';
-import { StaticMerger } from './optimize.js?v=20261008114723';
+import { Boat } from './boat.js?v=20261008115124';
+import { buildWorld, LAYOUT } from './world.js?v=20261008115124';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008115124';
+import { Walker } from './walker.js?v=20261008115124';
+import { Rib } from './rib.js?v=20261008115124';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008115124';
+import { STEPS, TEAM } from './cafe.js?v=20261008115124';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008115124';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008115124';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008115124';
+import { Race, COURSE } from './race.js?v=20261008115124';
+import { StaticMerger } from './optimize.js?v=20261008115124';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -581,7 +581,24 @@ const miniTarget = new THREE.WebGLRenderTarget(256, 256);
 miniTarget.texture.colorSpace = THREE.SRGBColorSpace;
 const miniScene = new THREE.Scene();
 const miniCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-miniScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: miniTarget.texture, toneMapped: false })));
+const miniMat = new THREE.MeshBasicMaterial({ map: miniTarget.texture, toneMapped: false, transparent: true });
+miniScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), miniMat));
+// Masque aux coins arrondis, calé sur l'arrondi CSS du cadre (sinon les coins du rendu dépassent).
+let miniMaskKey = '';
+function updateMiniMask(r) {
+  const radius = parseFloat(getComputedStyle(mm).borderTopLeftRadius) || 0;
+  const key = `${Math.round(r.width)}:${radius}`;
+  if (key === miniMaskKey) return;
+  miniMaskKey = key;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const k = cv.getContext('2d');
+  k.fillStyle = '#000'; k.fillRect(0, 0, 256, 256);
+  k.fillStyle = '#fff'; k.beginPath(); k.roundRect(0, 0, 256, 256, (radius / r.width) * 256); k.fill();
+  miniMat.alphaMap?.dispose();
+  miniMat.alphaMap = new THREE.CanvasTexture(cv);
+  miniMat.needsUpdate = true;
+}
 let miniAge = 1e9;
 function renderMinimap(dt) {
   miniAge += dt;
@@ -595,6 +612,7 @@ function renderMinimap(dt) {
     renderer.shadowMap.autoUpdate = true;
   }
   const r = mm.getBoundingClientRect();
+  updateMiniMask(r);
   const y = innerHeight - r.bottom;
   renderer.autoClear = false;
   renderer.setScissorTest(true);
