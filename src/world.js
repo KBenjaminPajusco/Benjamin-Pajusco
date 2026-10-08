@@ -776,6 +776,28 @@ export function buildWorld(scene) {
       moored.root.position.y = -0.2;
       root.add(moored.root);
       circles.push({ x: 525, z: -240, r: 7 });
+      // À terre, à droite du bâtiment : un AC40 et un AC75 démâtés, sur leurs bers, foils relevés.
+      const parked = (px, pz, k) => {
+        const boat = new Boat({ rig: false });
+        boat.armPort.rotation.z = 1.95;
+        boat.armStbd.rotation.z = -1.95;
+        boat.root.scale.setScalar(k);
+        boat.root.position.set(px, qTop + 2.2 * k, pz); // assez haut pour que le safran ne touche pas le sol
+        boat.root.rotation.y = Math.PI / 2;
+        root.add(boat.root);
+        // Le ber : deux berceaux et leurs longerons, sous la coque.
+        const cradle = new THREE.Group();
+        cradle.position.set(px, qTop, pz);
+        for (const dx of [-3.2, 3.2]) {
+          cradle.add(solid(new THREE.BoxGeometry(0.5 * k, 2.3 * k, 2.6 * k).translate(dx * k, 1.15 * k, 0), '#55607a', { outlineWidth: 0.05 }));
+          cradle.add(solid(new THREE.BoxGeometry(0.7 * k, 0.3 * k, 3.4 * k).translate(dx * k, 0.15 * k, 0), '#3c4a5c', { outlineWidth: 0.04 }));
+        }
+        for (const dz of [-1.1, 1.1]) cradle.add(solid(new THREE.BoxGeometry(7.4 * k, 0.3 * k, 0.3 * k).translate(0, 0.3 * k, dz * k), '#3c4a5c', { outlineWidth: 0.03 }));
+        root.add(cradle);
+        blocks.boxes.push({ x: px, z: pz, hx: 6.6 * k, hz: 2 * k });
+      };
+      parked(495, -287, 1);    // AC40
+      parked(518, -287, 1.9);  // AC75
       labels.push({ pos: new THREE.Vector3(470, qTop + 24, -290), html: `<i>Emploi actuel</i>${kc.org}`, cls: 'label-buoy k-job', zone: 'kc', hideInZone: true });
       zones.push({
         id: 'kc', x: 520, z: -210, r: 30, zoom: 1.1, land: { x: 470, z: -285, r: 22 },

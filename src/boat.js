@@ -145,7 +145,7 @@ function polar(twa) {
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 export class Boat {
-  constructor({ label = 'BP', accent = PALETTE.accent, hullColor = PALETTE.hull } = {}) {
+  constructor({ label = 'BP', accent = PALETTE.accent, hullColor = PALETTE.hull, rig = true } = {}) {
     this.root = new THREE.Group();
     this.tilt = new THREE.Group();
     this.root.add(this.tilt);
@@ -158,38 +158,41 @@ export class Boat {
     const cockpit = solid(new THREE.BoxGeometry(0.8, 0.14, 6.2), '#262f3d', { outlineWidth: 0 });
     cockpit.position.set(0, 1.08, -1.9);
     this.tilt.add(cockpit);
-    const helmets = [PALETTE.accent, '#ffffff', PALETTE.accent, '#ffffff'];
+    const helmets = rig ? [PALETTE.accent, '#ffffff', PALETTE.accent, '#ffffff'] : [];
     helmets.forEach((c, i) => {
       const head = solid(new THREE.IcosahedronGeometry(0.24, 0), c, { outlineWidth: 0.03 });
       head.position.set(i % 2 ? 0.18 : -0.18, 1.35, -0.6 - i * 1.15);
       this.tilt.add(head);
     });
 
-    const mast = solid(new THREE.CylinderGeometry(0.12, 0.2, 17, 6).scale(0.55, 1, 1.4).translate(0, 8.5 + 1.0, 0), '#e9e4da', { outlineWidth: 0.04 });
-    mast.position.z = MAST_Z;
-    this.tilt.add(mast);
+    // Mât, voiles et feux : absents quand le bateau est à terre, sur son ber.
+    if (rig) {
+      const mast = solid(new THREE.CylinderGeometry(0.12, 0.2, 17, 6).scale(0.55, 1, 1.4).translate(0, 8.5 + 1.0, 0), '#e9e4da', { outlineWidth: 0.04 });
+      mast.position.z = MAST_Z;
+      this.tilt.add(mast);
 
-    const sailMat = toon('#ffffff', { map: sailTexture(label, accent), side: THREE.DoubleSide, flatShading: true });
-    this.main = new Sail({
-      luff0: new THREE.Vector3(0, 1.3, MAST_Z), luff1: new THREE.Vector3(0, 17.4, MAST_Z),
-      leech0: new THREE.Vector3(0, 1.25, MAST_Z - 4.9), leech1: new THREE.Vector3(0, 17.2, MAST_Z - 1.1),
-      material: sailMat,
-    });
-    this.tilt.add(this.main.mesh);
-    const back = sailMat.map.clone();
-    back.wrapS = THREE.RepeatWrapping;
-    back.repeat.x = -1;
-    back.needsUpdate = true;
-    sailMat.side = THREE.FrontSide;
-    this.main.mesh.add(new THREE.Mesh(this.main.geometry, toon('#ffffff', { map: back, side: THREE.BackSide, flatShading: true })));
-    this.jib = new Sail({
-      luff0: new THREE.Vector3(0, 0.95, L / 2 - 0.45), luff1: new THREE.Vector3(0, 13.2, MAST_Z + 0.2),
-      leech0: new THREE.Vector3(0, 1.25, MAST_Z - 0.4), leech1: new THREE.Vector3(0, 13.2, MAST_Z + 0.1),
-      segU: 3, segV: 6, material: toon(PALETTE.sail, { side: THREE.DoubleSide, flatShading: true }),
-    });
-    this.tilt.add(this.jib.mesh);
+      const sailMat = toon('#ffffff', { map: sailTexture(label, accent), side: THREE.DoubleSide, flatShading: true });
+      this.main = new Sail({
+        luff0: new THREE.Vector3(0, 1.3, MAST_Z), luff1: new THREE.Vector3(0, 17.4, MAST_Z),
+        leech0: new THREE.Vector3(0, 1.25, MAST_Z - 4.9), leech1: new THREE.Vector3(0, 17.2, MAST_Z - 1.1),
+        material: sailMat,
+      });
+      this.tilt.add(this.main.mesh);
+      const back = sailMat.map.clone();
+      back.wrapS = THREE.RepeatWrapping;
+      back.repeat.x = -1;
+      back.needsUpdate = true;
+      sailMat.side = THREE.FrontSide;
+      this.main.mesh.add(new THREE.Mesh(this.main.geometry, toon('#ffffff', { map: back, side: THREE.BackSide, flatShading: true })));
+      this.jib = new Sail({
+        luff0: new THREE.Vector3(0, 0.95, L / 2 - 0.45), luff1: new THREE.Vector3(0, 13.2, MAST_Z + 0.2),
+        leech0: new THREE.Vector3(0, 1.25, MAST_Z - 0.4), leech1: new THREE.Vector3(0, 13.2, MAST_Z + 0.1),
+        segU: 3, segV: 6, material: toon(PALETTE.sail, { side: THREE.DoubleSide, flatShading: true }),
+      });
+      this.tilt.add(this.jib.mesh);
 
-    navLights(this.tilt, { port: [1.5, 1.3, 4.4], starboard: [-1.5, 1.3, 4.4], mast: [0, 18.6, MAST_Z], size: 3.5 });
+      navLights(this.tilt, { port: [1.5, 1.3, 4.4], starboard: [-1.5, 1.3, 4.4], mast: [0, 18.6, MAST_Z], size: 3.5 });
+    }
 
     this.armPort = foilArm(1);
     this.armStbd = foilArm(-1);
@@ -268,8 +271,8 @@ export class Boat {
     this.rudder.rotation.y = -this.turn * 0.35;
 
     const trim = 0.06 + 0.4 * Math.pow(this.twa / Math.PI, 2);
-    this.main.update(this.sideSmooth, trim, 0.1);
-    this.jib.update(this.sideSmooth, trim * 0.85, 0.12);
+    this.main?.update(this.sideSmooth, trim, 0.1);
+    this.jib?.update(this.sideSmooth, trim * 0.85, 0.12);
   }
 
   // Points d'émission du sillage, en coordonnées monde.
