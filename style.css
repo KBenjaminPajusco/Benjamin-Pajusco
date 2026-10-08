@@ -203,7 +203,7 @@ kbd { font: inherit; font-weight: 700; border: 1.5px solid var(--ink); border-bo
 }
 .label-step b { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; letter-spacing: .02em; line-height: 1; }
 .label-step small { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255, 255, 255, .65); font-weight: 400; }
-.label-step.active { background: #00d4ff; color: #0a1422; box-shadow: 0 0 0 4px rgba(0, 212, 255, .35), 0 3px 0 rgba(0, 0, 0, .35); }
+.label-step.active { z-index: 5; background: #00d4ff; color: #0a1422; box-shadow: 0 0 0 4px rgba(0, 212, 255, .35), 0 3px 0 rgba(0, 0, 0, .35); }
 .label-step.active i { background: #0a1422; color: #00d4ff; }
 .label-step.active small { color: #0a1422; }
 
