@@ -163,10 +163,12 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
 
   // --- Réseau routier : une boucle autour du parc et des branches vers chaque bâtiment.
   const roadSamples = [];
+  const roadLines = []; // tracés des rues, pour les cartes (rapport de course)
   const tanR = new THREE.Vector3();
   const road = (pts, closed = false, w = 3.6) => {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, Y + 0.07, z)), closed, 'catmullrom', 0.5);
     const N = Math.max(12, Math.round(curve.getLength() / 2.5));
+    roadLines.push(curve.getSpacedPoints(Math.max(8, Math.round(N / 3))).map((p) => ({ x: p.x, z: p.z })));
     const pos = [], idx = [];
     for (let i = 0; i <= N; i++) {
       const u = closed ? (i % N) / N : i / N;
@@ -344,4 +346,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
+  return { roads: roadLines };
 }

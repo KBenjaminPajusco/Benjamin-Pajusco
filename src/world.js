@@ -162,7 +162,7 @@ export function buildWorld(scene) {
   const zones = [];
   const labels = [];
   const anim = [];
-  const map = { islands: [], boxes: [], buoys: [], marks: [] };
+  const map = { islands: [], boxes: [], buoys: [], marks: [], roads: [] };
   const root = new THREE.Group();
   scene.add(root);
 
@@ -170,7 +170,7 @@ export function buildWorld(scene) {
   const snapshot = () => ({
     root: root.children.length, circles: circles.length, boxes: boxes.length, segs: segs.length,
     landB: land.boxes.length, landC: land.circles.length, landP: land.polys.length, landH: land.hills.length, blockB: blocks.boxes.length, blockC: blocks.circles.length,
-    zones: zones.length, labels: labels.length, mapB: map.boxes.length, mapI: map.islands.length,
+    zones: zones.length, labels: labels.length, mapB: map.boxes.length, mapI: map.islands.length, mapR: map.roads.length,
   });
   function shiftSince(snap, dx, dz) {
     root.children.slice(snap.root).forEach((o) => { o.position.x += dx; o.position.z += dz; });
@@ -185,6 +185,7 @@ export function buildWorld(scene) {
     blocks.circles.slice(snap.blockC).forEach(xz);
     map.boxes.slice(snap.mapB).forEach(xz);
     map.islands.slice(snap.mapI).forEach(xz);
+    map.roads.slice(snap.mapR).forEach((r) => r.forEach(xz));
     segs.slice(snap.segs).forEach((g) => { g[0] += dx; g[1] += dz; g[2] += dx; g[3] += dz; });
     labels.slice(snap.labels).forEach((l) => { l.pos.x += dx; l.pos.z += dz; });
     zones.slice(snap.zones).forEach((z) => {
@@ -677,7 +678,8 @@ export function buildWorld(scene) {
     }
 
     // La vie de l'île : plage, parc, supermarché, immeubles, tour, entrepôts, arbres.
-    buildIslandLife({ root, anim, blocks, circles, poly: portIsland.poly, top: qTop, S, hills: land.hills });
+    const life = buildIslandLife({ root, anim, blocks, circles, poly: portIsland.poly, top: qTop, S, hills: land.hills });
+    map.roads.push(...life.roads);
   }
 
   shiftSince(harbourStart, HARBOUR_SHIFT.x, HARBOUR_SHIFT.z);
@@ -875,5 +877,5 @@ export function buildWorld(scene) {
   }
 
   const addObstacle = (c) => circles.push(c);
-  return { berth: kcBerth, zones, labels, collide, update, map, bound: BOUND, groundY, walkable, landingSpot, cafe: cafeLoop, phare, regions, inRegion, inPort, water, addObstacle };
+  return { berth: kcBerth, islandPoly: () => portIsland?.poly.pts, zones, labels, collide, update, map, bound: BOUND, groundY, walkable, landingSpot, cafe: cafeLoop, phare, regions, inRegion, inPort, water, addObstacle };
 }

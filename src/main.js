@@ -262,6 +262,82 @@ cardTab.addEventListener('click', () => {
 });
 let cardSize = { w: 0, h: 0 };
 
+// --- Course à pied : le footing du visiteur sur l'île, présenté comme un rapport d'activité (carte, distance, allure).
+// 1 unité = 1 m ; le temps de jeu est accéléré pour des allures crédibles (≈ 4:10 /km en courant, ≈ 7:50 /km en marchant).
+const RUN_TIME_SCALE = 7.5;
+const runLog = { segs: [], dist: 0, time: 0, start: null, prev: null };
+function recordRun(dt) {
+  // Le chrono ne tourne que si l'on avance vraiment (pas quand on bute contre un mur), comme une pause auto.
+  const prev = runLog.prev ?? walker.pos.clone();
+  const moved = Math.hypot(walker.pos.x - prev.x, walker.pos.y - prev.y);
+  runLog.prev = walker.pos.clone();
+  if (walker.pull || moved > 20 || moved / Math.max(dt, 1e-3) < 1 || !world.inPort(walker.pos)) return;
+  runLog.time += dt * RUN_TIME_SCALE;
+  runLog.start ??= new Date();
+  let seg = runLog.segs[runLog.segs.length - 1];
+  const last = seg?.[seg.length - 1];
+  const d = last ? Math.hypot(walker.pos.x - last.x, walker.pos.y - last.z) : 0;
+  if (!last || d > 40) { seg = []; runLog.segs.push(seg); } // téléportation ou retour à terre : nouveau tronçon
+  else if (d < 2.5) return;
+  else runLog.dist += d;
+  seg.push({ x: walker.pos.x, z: walker.pos.y });
+}
+const fmtDur = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, ss = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`; };
+let actAge = 1e9;
+function renderActivity(dt) {
+  actAge += dt;
+  if (actAge < 0.3) return;
+  actAge = 0;
+  const el = card.querySelector('.activity');
+  const km = runLog.dist / 1000;
+  el.querySelector('.act-dist').textContent = `${km.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
+  el.querySelector('.act-pace').textContent = km > 0.02 ? `${fmtDur(runLog.time / km)} /km` : '–:–– /km';
+  el.querySelector('.act-time').textContent = fmtDur(runLog.time);
+  el.querySelector('.act-when').textContent = runLog.start
+    ? `Aujourd’hui à ${runLog.start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · Île de Benjamin`
+    : 'Pas encore parti';
+  el.querySelector('.act-empty').hidden = runLog.dist > 5;
+  drawActivityMap(el.querySelector('.act-map'));
+}
+function drawActivityMap(cv) {
+  const poly = world.islandPoly();
+  if (!poly) return;
+  const dpr = Math.min(devicePixelRatio, 2), W = cv.clientWidth || 320, H = cv.clientHeight || 180;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Cadrage sur la trace (au moins 160 m de large), sinon toute l'île.
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  const grow = (x, z) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); };
+  const trace = runLog.segs.flat();
+  if (runLog.dist > 5) {
+    trace.forEach((p) => grow(p.x, p.z));
+    if (mode === 'walk') grow(walker.pos.x, walker.pos.y);
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, hw = Math.max((x1 - x0) / 2, 80), hh = Math.max((z1 - z0) / 2, 45);
+    x0 = cx - hw; x1 = cx + hw; z0 = cz - hh; z1 = cz + hh;
+  } else poly.forEach((p) => grow(p.x, p.y));
+  const pad = 14, s = Math.min((W - 2 * pad) / (x1 - x0), (H - 2 * pad) / (z1 - z0));
+  const X = (x) => W / 2 + (x - (x0 + x1) / 2) * s, Y = (z) => H / 2 + (z - (z0 + z1) / 2) * s;
+  ctx.fillStyle = '#d6e6ef'; ctx.fillRect(0, 0, W, H);
+  ctx.beginPath(); poly.forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(p.x), Y(p.y))); ctx.closePath();
+  ctx.fillStyle = '#f4f1ea'; ctx.fill(); ctx.strokeStyle = '#b9c7cf'; ctx.lineWidth = 1; ctx.stroke();
+  // Les rues, en traits fins comme sur une carte de sortie.
+  ctx.lineJoin = ctx.lineCap = 'round';
+  ctx.strokeStyle = '#d3cbb9'; ctx.lineWidth = Math.max(2.4, 7.2 * s);
+  for (const r of world.map.roads) { ctx.beginPath(); r.forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(p.x), Y(p.z))); ctx.stroke(); }
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.2, 5 * s);
+  for (const r of world.map.roads) { ctx.beginPath(); r.forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(p.x), Y(p.z))); ctx.stroke(); }
+  // La trace : orange vif, départ en vert, position actuelle en point plein.
+  ctx.strokeStyle = '#fc5200'; ctx.lineWidth = 3;
+  for (const seg of runLog.segs) {
+    if (seg.length < 2) continue;
+    ctx.beginPath(); seg.forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(p.x), Y(p.z))); ctx.stroke();
+  }
+  const first = runLog.segs.find((g) => g.length)?.[0];
+  if (first) { ctx.fillStyle = '#2f9e55'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(first.x), Y(first.z), 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
+  if (mode === 'walk') { ctx.fillStyle = '#1d2533'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(walker.pos.x), Y(walker.pos.y), 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
+}
+
 // --- Tractions : chaque traction faite par un visiteur s'ajoute à un compteur partagé (service Abacus, sans compte).
 const PULLUP_API = 'https://abacus.jasoncameron.dev';
 const PULLUP_KEY = 'benjamin-pajusco-fr/tractions';
@@ -343,6 +419,8 @@ function renderCard(z) {
   card.querySelector('.concepts-btn').hidden = !c.concepts;
   card.querySelector('.race-btn').hidden = !c.raceBtn;
   card.querySelector('.pullup').hidden = z.id !== 'gym';
+  card.querySelector('.activity').hidden = z.id !== 'run';
+  if (z.id === 'run') { actAge = 1e9; renderActivity(0); }
   if (z.id === 'gym') refreshPullups();
   const meta = card.querySelector('.meta');
   meta.textContent = c.meta || '';
@@ -829,6 +907,7 @@ function tick(dt) {
   if (mode === 'walk') {
     // À terre, le bateau reste amarré là où on l'a laissé.
     boat.update(dt, { steer: 0, power: 0, brake: true, moor: true }, world.collide);
+    recordRun(dt);
     if (walker.pull) {
       const wi = readWalkInput();
       const reps = walker.updatePull(dt, wi.x !== 0 || wi.z !== 0);
@@ -934,6 +1013,7 @@ function tick(dt) {
   merger.update(simTime);
   updateLabels(focus);
   placeCard();
+  if (activeZone?.id === 'run' && !card.hidden) renderActivity(dt);
   // Hauteur du tiroir (mobile) : le bouton d'action et les messages se placent au-dessus.
     drawMap(mm);
   if (!mapOverlay.hidden) {
