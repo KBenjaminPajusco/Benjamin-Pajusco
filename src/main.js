@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008151501';
-import { buildWorld, LAYOUT } from './world.js?v=20261008151501';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008151501';
-import { Walker } from './walker.js?v=20261008151501';
-import { Rib } from './rib.js?v=20261008151501';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008151501';
-import { STEPS, TEAM } from './cafe.js?v=20261008151501';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008151501';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008151501';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008151501';
-import { Race, COURSE } from './race.js?v=20261008151501';
-import { StaticMerger } from './optimize.js?v=20261008151501';
-import { solid } from './toon.js?v=20261008151501';
+import { Boat } from './boat.js?v=20261008151957';
+import { buildWorld, LAYOUT } from './world.js?v=20261008151957';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008151957';
+import { Walker } from './walker.js?v=20261008151957';
+import { Rib } from './rib.js?v=20261008151957';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008151957';
+import { STEPS, TEAM } from './cafe.js?v=20261008151957';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008151957';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008151957';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008151957';
+import { Race, COURSE } from './race.js?v=20261008151957';
+import { StaticMerger } from './optimize.js?v=20261008151957';
+import { solid, WIND } from './toon.js?v=20261008151957';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1130,6 +1130,7 @@ function frame() {
 
 function tick(dt) {
   simTime += dt;
+  WIND.value = simTime;
   const t = simTime;
 
   const input = readInput();

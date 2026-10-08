@@ -13,6 +13,34 @@ const gradient = (() => {
 
 const cache = new Map();
 
+// Vent dans les feuillages : un léger balancement, propre à chaque arbre (phase tirée de sa position) et fait de
+// plusieurs rafales superposées, donc jamais synchrone. Seuls les sommets en hauteur bougent (le tronc reste planté).
+export const WIND = { value: 0 };
+const WIND_GLSL = /* glsl */`
+  uniform float uWind;
+  vec3 windOffset(vec3 wp) {
+    float h = clamp((wp.y - 2.4) / 6.0, 0.0, 1.4);
+    float ph = dot(wp.xz, vec2(0.071, 0.053));
+    float g = sin(uWind * 1.3 + ph) * 0.55 + sin(uWind * 2.9 + ph * 2.3) * 0.25 + sin(uWind * 0.41 + ph * 0.37) * 0.4;
+    return vec3(0.35 * g, 0.0, 0.6 * (g + 0.45)) * h * 0.3;
+  }
+`;
+const windCache = new Map();
+function toonWind(color, opts) {
+  const key = color + JSON.stringify(opts);
+  if (windCache.has(key)) return windCache.get(key);
+  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...opts });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uWind = WIND;
+    sh.vertexShader = sh.vertexShader
+      .replace('void main() {', WIND_GLSL + '\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += windOffset((modelMatrix * vec4(transformed, 1.0)).xyz);');
+  };
+  m.customProgramCacheKey = () => 'wind';
+  windCache.set(key, m);
+  return m;
+}
+
 export function toon(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!opts.map && cache.has(key)) return cache.get(key);
@@ -22,15 +50,17 @@ export function toon(color, opts = {}) {
 }
 
 const outlineMats = new Map();
-function outlineMaterial(thickness, color) {
-  const key = thickness + ':' + color;
+function outlineMaterial(thickness, color, wind = false) {
+  const key = thickness + ':' + color + (wind ? ':wind' : '');
   if (outlineMats.has(key)) return outlineMats.get(key);
   const m = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uThick: { value: thickness } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uThick: { value: thickness }, uWind: WIND },
     vertexShader: /* glsl */`
       uniform float uThick;
+      ${wind ? WIND_GLSL : ''}
       void main() {
         vec3 p = position + normal * uThick;
+        ${wind ? 'p += windOffset((modelMatrix * vec4(position, 1.0)).xyz); // le contour suit le feuillage' : ''}
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
       }`,
     fragmentShader: /* glsl */`
@@ -43,13 +73,13 @@ function outlineMaterial(thickness, color) {
 }
 
 // Contour "inverted hull" : on gonfle une copie de la géométrie le long de normales lissées.
-export function outline(mesh, thickness = 0.06, color = '#1d2533') {
+export function outline(mesh, thickness = 0.06, color = '#1d2533', wind = false) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', mesh.geometry.getAttribute('position').clone());
   if (mesh.geometry.index) g.setIndex(mesh.geometry.index.clone());
   const merged = mergeVertices(g, 1e-3);
   merged.computeVertexNormals();
-  const o = new THREE.Mesh(merged, outlineMaterial(thickness, color));
+  const o = new THREE.Mesh(merged, outlineMaterial(thickness, color, wind));
   o.castShadow = false;
   o.receiveShadow = false;
   mesh.add(o);
@@ -57,12 +87,12 @@ export function outline(mesh, thickness = 0.06, color = '#1d2533') {
 }
 
 // Mesh toon avec ombres et contour en un appel.
-export function solid(geometry, color, { outlineWidth = 0.06, flat = true, cast = true, receive = true } = {}) {
-  const mat = toon(color, flat ? { flatShading: true } : {});
+export function solid(geometry, color, { outlineWidth = 0.06, flat = true, cast = true, receive = true, wind = false } = {}) {
+  const mat = (wind ? toonWind : toon)(color, flat ? { flatShading: true } : {});
   const mesh = new THREE.Mesh(geometry, mat);
   mesh.castShadow = cast;
   mesh.receiveShadow = receive;
-  if (outlineWidth > 0) outline(mesh, outlineWidth);
+  if (outlineWidth > 0) outline(mesh, outlineWidth, '#1d2533', wind);
   return mesh;
 }
 

@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151501';
-import { makeWater } from './effects.js?v=20261008151501';
-import { person } from './characters.js?v=20261008151501';
-import { buildCafe } from './cafe.js?v=20261008151501';
-import { buildMatchRace } from './matchrace.js?v=20261008151501';
-import { buildPhare } from './phare.js?v=20261008151501';
-import { Boat } from './boat.js?v=20261008151501';
-import { buildDecor } from './decor.js?v=20261008151501';
-import { buildTown } from './town.js?v=20261008151501';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008151501';
-import { buildIslandLife } from './islandlife.js?v=20261008151501';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008151501';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151957';
+import { makeWater } from './effects.js?v=20261008151957';
+import { person } from './characters.js?v=20261008151957';
+import { buildCafe } from './cafe.js?v=20261008151957';
+import { buildMatchRace } from './matchrace.js?v=20261008151957';
+import { buildPhare } from './phare.js?v=20261008151957';
+import { Boat } from './boat.js?v=20261008151957';
+import { buildDecor } from './decor.js?v=20261008151957';
+import { buildTown } from './town.js?v=20261008151957';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008151957';
+import { buildIslandLife } from './islandlife.js?v=20261008151957';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008151957';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -131,7 +131,7 @@ function tree(R) {
   const g = new THREE.Group();
   const h = 4 + R() * 3;
   g.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 1.6, 5).translate(0, 0.8, 0), PALETTE.wood, { outlineWidth: 0.1 }));
-  g.add(solid(new THREE.ConeGeometry(1.8 + R() * 0.6, h, 6).translate(0, 1.4 + h / 2, 0), R() > 0.5 ? PALETTE.grassDark : '#4f8f4a', { outlineWidth: 0.12 }));
+  g.add(solid(new THREE.ConeGeometry(1.8 + R() * 0.6, h, 6).translate(0, 1.4 + h / 2, 0), R() > 0.5 ? PALETTE.grassDark : '#4f8f4a', { outlineWidth: 0.12, wind: true }));
   g.rotation.y = R() * 6;
   return g;
 }
@@ -600,7 +600,7 @@ export function buildWorld(scene) {
       // Érables rouges et drapeau devant l'entrée.
       [[-21, 4], [8, 3], [-19, -14]].forEach(([tx, tz], k) => {
         c.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 5).translate(tx, 1.2, tz), PALETTE.wood, { outlineWidth: 0.08 }));
-        c.add(solid(new THREE.IcosahedronGeometry(2.2 + k * 0.3, 0).translate(tx, 4, tz), k === 1 ? '#e85d2a' : '#d7372b', { outlineWidth: 0.12 }));
+        c.add(solid(new THREE.IcosahedronGeometry(2.2 + k * 0.3, 0).translate(tx, 4, tz), k === 1 ? '#e85d2a' : '#d7372b', { outlineWidth: 0.12, wind: true }));
       });
       const f = flag('CA', 9);
       f.position.set(-21, 0, -6);
@@ -944,7 +944,7 @@ export function buildWorld(scene) {
     v.add(solid(new THREE.CylinderGeometry(5.5, 7, 1.2, 10).translate(0, 20.6, 0), '#4a3f38', { outlineWidth: 0.12 }));
     for (let k = 0; k < 5; k++) {
       const a = k * 1.3;
-      v.add(solid(new THREE.ConeGeometry(1.4, 4, 5).translate(Math.cos(a) * 24, 3, Math.sin(a) * 24), '#4f8f4a', { outlineWidth: 0.1 }));
+      v.add(solid(new THREE.ConeGeometry(1.4, 4, 5).translate(Math.cos(a) * 24, 3, Math.sin(a) * 24), '#4f8f4a', { outlineWidth: 0.1, wind: true }));
     }
     const puffs = [];
     for (let k = 0; k < 6; k++) {

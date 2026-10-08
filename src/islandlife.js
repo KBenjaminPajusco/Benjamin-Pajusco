@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008151501';
-import { person } from './characters.js?v=20261008151501';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008151501';
+import { solid, rng, PALETTE } from './toon.js?v=20261008151957';
+import { person } from './characters.js?v=20261008151957';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008151957';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -13,13 +13,13 @@ function pine(R, y) {
   const g = new THREE.Group();
   const h = 4 + R() * 3;
   g.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 1.6, 5).translate(0, y + 0.8, 0), PALETTE.wood, { outlineWidth: 0.08 }));
-  g.add(solid(new THREE.ConeGeometry(1.8 + R() * 0.6, h, 6).translate(0, y + 1.4 + h / 2, 0), R() > 0.5 ? '#4f8f4a' : PALETTE.grassDark, { outlineWidth: 0.1 }));
+  g.add(solid(new THREE.ConeGeometry(1.8 + R() * 0.6, h, 6).translate(0, y + 1.4 + h / 2, 0), R() > 0.5 ? '#4f8f4a' : PALETTE.grassDark, { outlineWidth: 0.1, wind: true }));
   return g;
 }
 function leafy(R, y) {
   const g = new THREE.Group();
   g.add(solid(new THREE.CylinderGeometry(0.35, 0.45, 2.6, 5).translate(0, y + 1.3, 0), PALETTE.wood, { outlineWidth: 0.08 }));
-  g.add(solid(new THREE.IcosahedronGeometry(2.2 + R() * 1.2, 0).translate(0, y + 4.2, 0), R() > 0.5 ? '#5fa356' : '#79b85e', { outlineWidth: 0.1 }));
+  g.add(solid(new THREE.IcosahedronGeometry(2.2 + R() * 1.2, 0).translate(0, y + 4.2, 0), R() > 0.5 ? '#5fa356' : '#79b85e', { outlineWidth: 0.1, wind: true }));
   return g;
 }
 function palm(R, y) {
@@ -27,7 +27,7 @@ function palm(R, y) {
   const h = 6 + R() * 2;
   g.add(solid(new THREE.CylinderGeometry(0.25, 0.4, h, 5).rotateZ(0.12).translate(0.4, y + h / 2, 0), '#b08a5a', { outlineWidth: 0.06 }));
   for (let k = 0; k < 5; k++) {
-    const leaf = solid(new THREE.BoxGeometry(0.5, 0.12, 3.2).translate(0, 0, 1.6), '#4f9a48', { outlineWidth: 0.04 });
+    const leaf = solid(new THREE.BoxGeometry(0.5, 0.12, 3.2).translate(0, 0, 1.6), '#4f9a48', { outlineWidth: 0.04, wind: true });
     leaf.position.set(0.8, y + h, 0);
     leaf.rotation.set(0.45, (k / 5) * Math.PI * 2, 0);
     g.add(leaf);

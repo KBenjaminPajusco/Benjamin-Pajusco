@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151501';
-import { person } from './characters.js?v=20261008151501';
-import { keelboat } from './matchrace.js?v=20261008151501';
-import { lampPost } from './island.js?v=20261008151501';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151957';
+import { person } from './characters.js?v=20261008151957';
+import { keelboat } from './matchrace.js?v=20261008151957';
+import { lampPost } from './island.js?v=20261008151957';
 
 // La ville du port : vieille ville à rue sinueuse avec voitures, promenade avec passants,
 // capitainerie, et une marina (pontons, places, bateaux amarrés) dans le bassin.
@@ -175,7 +175,7 @@ export function buildTown({ root, anim, labels, circles, blocks, land, qTop, S }
   blocks.circles.push({ x: 249, z: -360, r: 4.2 });
   for (const [dx, dz] of [[-9, -6], [9, -6], [-9, 6], [9, 6]]) {
     town.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 5).translate(249 + dx, Y + 1.2, -360 + dz), PALETTE.wood, { outlineWidth: 0.06 }));
-    town.add(solid(new THREE.IcosahedronGeometry(2.2, 0).translate(249 + dx, Y + 4, -360 + dz), '#4f8f4a', { outlineWidth: 0.08 }));
+    town.add(solid(new THREE.IcosahedronGeometry(2.2, 0).translate(249 + dx, Y + 4, -360 + dz), '#4f8f4a', { outlineWidth: 0.08, wind: true }));
   }
 
   // Lampadaires le long de la rue de la vieille ville.
@@ -318,7 +318,7 @@ export function buildTown({ root, anim, labels, circles, blocks, land, qTop, S }
     for (const [k, x] of [322, 352, 392, 408, 424, 440].entries()) {
       ground(2.4, 2.4, x, -293, '#3c4a5c', 0.07);
       solidAt(new THREE.CylinderGeometry(0.28, 0.38, 3, 5).translate(0, 1.5, 0), PALETTE.wood, x, -293, 0, 0.05);
-      solidAt(new THREE.IcosahedronGeometry(2 + (k % 3) * 0.3, 0).scale(1, 1.15, 1).translate(0, 4.6, 0), k % 2 ? '#4f8a3c' : '#5f9e48', x, -293, k, 0.08);
+      { const crown = solid(new THREE.IcosahedronGeometry(2 + (k % 3) * 0.3, 0).scale(1, 1.15, 1).translate(0, 4.6, 0), k % 2 ? '#4f8a3c' : '#5f9e48', { outlineWidth: 0.08, wind: true }); crown.position.set(x, Y, -293); crown.rotation.y = k; town.add(crown); }
       circles.push({ x, z: -293, r: 0.8 });
     }
   }
