@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { toon } from './toon.js?v=20261008115714';
-import { LAMP, NAV } from './island.js?v=20261008115714';
+import { toon } from './toon.js?v=20261008115753';
+import { LAMP, NAV } from './island.js?v=20261008115753';
 
 // Lumière calée sur l'heure locale du visiteur : nuit, aube, jour, coucher de soleil.
 // Pour tester une heure précise : ?heure=21.5
