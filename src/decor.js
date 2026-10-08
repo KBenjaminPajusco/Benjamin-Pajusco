@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, rng } from './toon.js?v=20261008153609';
-import { keelboat } from './matchrace.js?v=20261008153609';
+import { solid, rng } from './toon.js?v=20261008154111';
+import { keelboat } from './matchrace.js?v=20261008154111';
 
 // Habillage du plan d'eau : balisage latéral (IALA A), cardinales, danger isolé, bateaux PNJ.
 

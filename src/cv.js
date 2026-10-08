@@ -163,6 +163,12 @@ export const INTERESTS = {
     body: 'Algorithmes et katas pour le plaisir : 4 kyu sur Codewars. Participations à la Battle Dev Thales et à la Match Up Coding Battle.',
     tags: ['Codewars 4 kyu', 'Battle Dev', 'Python'],
   },
+  mod: {
+    kicker: 'Centre d’intérêt',
+    title: 'Modding & rétro-ingénierie',
+    body: 'Modding et rétro-ingénierie de jeux vidéo, notamment Trackmania : créer des modes de jeu inédits.',
+    tags: ['Trackmania', 'Modding', 'Rétro-ingénierie'],
+  },
   climb: {
     kicker: 'Centre d’intérêt',
     title: 'Escalade',

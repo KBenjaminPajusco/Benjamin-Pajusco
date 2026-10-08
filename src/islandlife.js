@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008153609';
-import { person } from './characters.js?v=20261008153609';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008153609';
+import { solid, toon as toonMat, rng, PALETTE } from './toon.js?v=20261008154111';
+import { person } from './characters.js?v=20261008154111';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008154111';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -227,10 +227,74 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     });
   }
   const codeFree = (x, z) => Math.hypot(x - CODE.x, z - CODE.z) > 9;
+
+  // --- Modding : une monoplace « esprit Stadium » (recréée ici, pas extraite du jeu) qui fait des acrobaties
+  // au-dessus du dernier quart du parc ; au sol, un tremplin à flèches et une arche de départ en damier.
+  const MOD = { x: park.x + 30, z: park.z - 15 };
+  {
+    // Tremplin et plaques de turbo.
+    const tri = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(9, 0), new THREE.Vector2(9, 2.6)]);
+    const ramp = solid(new THREE.ExtrudeGeometry(tri, { depth: 5, bevelEnabled: false }).translate(-4.5, 0, -2.5).rotateY(Math.PI / 2), '#9aa3ad', { outlineWidth: 0.08 });
+    ramp.position.set(MOD.x + 8, Y, MOD.z + 2);
+    life.add(ramp);
+    for (let k = 0; k < 3; k++) {
+      const pad = solid(new THREE.BoxGeometry(3.4, 0.12, 1.4).translate(MOD.x + 8, Y + 0.1, MOD.z + 10 + k * 1.8), k % 2 ? '#ff6a4d' : '#ffc845', { outlineWidth: 0.02 });
+      life.add(pad);
+    }
+    // Arche de départ en damier.
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 48;
+    const k2 = cv.getContext('2d');
+    for (let i = 0; i < 32; i++) for (let j = 0; j < 6; j++) { k2.fillStyle = (i + j) % 2 ? '#1d2533' : '#ffffff'; k2.fillRect(i * 8, j * 8, 8, 8); }
+    k2.fillStyle = '#1d2533'; k2.fillRect(78, 8, 100, 32);
+    k2.fillStyle = '#ffffff'; k2.font = '700 26px "Space Grotesk", Arial, sans-serif'; k2.textAlign = 'center'; k2.textBaseline = 'middle'; k2.fillText('START', 128, 25);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    for (const dx of [-3.4, 3.4]) life.add(solid(new THREE.BoxGeometry(0.5, 4.2, 0.5).translate(MOD.x + 8 + dx, Y + 2.1, MOD.z + 15), '#1d2533', { outlineWidth: 0.04 }));
+    const banner = new THREE.Mesh(new THREE.BoxGeometry(7.4, 1.3, 0.3), [toonMat('#1d2533'), toonMat('#1d2533'), toonMat('#1d2533'), toonMat('#1d2533'), new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
+    banner.position.set(MOD.x + 8, Y + 4.6, MOD.z + 15);
+    life.add(banner);
+    blocks.boxes.push({ x: MOD.x + 8, z: MOD.z + 2, hx: 2.7, hz: 4.6 });
+
+    // La monoplace : châssis effilé, pontons colorés, ailerons, roues apparentes (arrière plus grosses), pilote casqué.
+    const car = new THREE.Group();
+    const add = (geo, color, w = 0.04) => { const m = solid(geo, color, { outlineWidth: w }); car.add(m); return m; };
+    add(new THREE.BoxGeometry(0.9, 0.42, 3.6).translate(0, 0.55, -0.2), '#f6f1e7');
+    add(new THREE.BoxGeometry(0.55, 0.3, 1.5).translate(0, 0.45, 2.2), '#f6f1e7');
+    add(new THREE.BoxGeometry(0.3, 0.22, 0.6).translate(0, 0.4, 3.1), '#e8404a');
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.45, 0.42, 1.5).translate(s * 0.65, 0.5, -0.4), s < 0 ? '#4d7cff' : '#e8404a');
+    add(new THREE.BoxGeometry(2.3, 0.08, 0.55).translate(0, 0.22, 3.0), '#1d2533');
+    add(new THREE.BoxGeometry(2.0, 0.12, 0.7).translate(0, 1.25, -2.1), '#1d2533');
+    for (const s of [-0.55, 0.55]) add(new THREE.BoxGeometry(0.08, 0.6, 0.4).translate(s, 0.9, -2.0), '#1d2533', 0.02);
+    add(new THREE.SphereGeometry(0.3, 10, 8).translate(0, 0.95, -0.05), '#ffc845', 0.03);
+    add(new THREE.BoxGeometry(0.5, 0.12, 0.2).translate(0, 0.98, 0.18), '#1d2533', 0);
+    for (const [x, z, r, w] of [[-1.05, 1.7, 0.45, 0.4], [1.05, 1.7, 0.45, 0.4], [-1.1, -1.5, 0.6, 0.55], [1.1, -1.5, 0.6, 0.55]]) {
+      add(new THREE.CylinderGeometry(r, r, w, 12).rotateZ(Math.PI / 2).translate(x, r, z), '#1d2533', 0.03);
+      add(new THREE.CylinderGeometry(r * 0.45, r * 0.45, w + 0.04, 8).rotateZ(Math.PI / 2).translate(x, r, z), '#cfd6e0', 0);
+    }
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.4, 8).rotateX(-Math.PI / 2).translate(0, 0.6, -2.7), new THREE.MeshBasicMaterial({ color: '#ff9f1c' }));
+    car.add(flame);
+    car.scale.setScalar(1.7);
+    life.add(car);
+    // Vol acrobatique : un huit en altitude, des tonneaux, un passage sur le dos ; jamais tout à fait le même tour.
+    const at = (a) => new THREE.Vector3(MOD.x + Math.sin(a) * 20, Y + 13 + Math.sin(a * 3) * 4 + Math.cos(a * 0.5) * 2, MOD.z + Math.sin(a * 2) * 9);
+    const ahead = new THREE.Vector3();
+    anim.push((dt, t) => {
+      const a = t * 0.55;
+      car.position.copy(at(a));
+      car.lookAt(ahead.copy(at(a + 0.02)));
+      // Tonneaux sur une partie du tour, sinon simple inclinaison dans les virages.
+      const phase = (a / (Math.PI * 2)) % 1;
+      const roll = phase > 0.55 && phase < 0.8 ? ((phase - 0.55) / 0.25) * Math.PI * 4 : Math.sin(a * 2) * 0.5;
+      car.rotateZ(roll);
+      flame.scale.set(1, 1, 0.7 + Math.abs(Math.sin(t * 23)) * 0.6);
+    });
+  }
+  const modFree = (x, z) => Math.hypot(x - MOD.x - 8, z - MOD.z - 8) > 11;
   for (let k = 0; k < 26; k++) {
     const a = R() * Math.PI * 2, rr = 0.45 + R() * 0.45;
     const x = park.x + Math.cos(a) * park.rx * rr, z = park.z + Math.sin(a) * park.rz * rr;
-    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10 || !climbFree(x, z) || !codeFree(x, z)) continue;
+    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10 || !climbFree(x, z) || !codeFree(x, z) || !modFree(x, z)) continue;
     if (blocks.boxes.some((b) => Math.abs(x - b.x) < b.hx + 2 && Math.abs(z - b.z) < b.hz + 2)) continue; // ex. la muscu
     const t = leafy(R, Y);
     t.position.set(x, 0, z);
@@ -494,5 +558,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
-  return { roads: roadLines, park, climb: CLIMB, code: CODE };
+  return { roads: roadLines, park, climb: CLIMB, code: CODE, mod: MOD };
 }
