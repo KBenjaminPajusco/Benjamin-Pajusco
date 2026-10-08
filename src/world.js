@@ -362,41 +362,16 @@ export function buildWorld(scene) {
       sp.position.y = h;
       return sp;
     };
-    const building = (e, bx, bz, make, h, half) => {
-      const b = new THREE.Group();
-      b.position.set(bx, top, bz);
-      make(b);
-      b.add(sign(e, h));
-      g.add(b);
-      const wx = x + bx, wz = z + bz;
-      blocks.boxes.push({ x: wx, z: wz, hx: half[0], hz: half[1] });
-      labels.push({ pos: new THREE.Vector3(wx, top + h + 4.5, wz), html: e.school, cls: 'label-place', zone: e.id, hideInZone: true });
-      zones.push({
-        id: e.id, x: wx, z: wz, r: 0, land: { x: wx, z: wz, r: Math.max(half[0], half[1]) + 11 },
-        anchor: new THREE.Vector3(wx, top + h + 3, wz), geo: { ...e.geo, place: e.place, flag: e.flag },
-        card: { brand: e.brand, logo: e.logo, kicker: e.dates, title: e.school, sub: e.degree, tags: e.tags, body: e.body, meta: e.place, accent: e.brand.color },
-      });
-    };
-    const [poly, lycee, guelph] = EDUCATION;
-
-    // Polytech Nantes, site de la Chantrerie, d'après la vue aérienne :
-    // IRESTE = la longue halle (aile basse en sheds devant), ISITEM = la rotonde derrière, de l'autre côté de la route,
-    // IHT = le bâtiment aux voûtes blanches à l'avant ; parkings, pelouses et cheminements entre les bâtiments.
-    {
-      const px = at.polytech[0], pz = at.polytech[1];
-      const c = new THREE.Group();
-      c.position.set(px, top, pz);
-      g.add(c);
-      const white = '#f4f6f8', glass = '#4aa3df', blue = '#2f80c3', pave = '#d9d4c8', grey = '#c3cad3', roofGrey = '#7d8896', asphalt = '#5b6574';
-      const wx = x + px, wz = z + pz;
+    // Outils communs aux campus, en coordonnées locales du campus (c) dont l'origine monde est (wx, wz).
+    const campusKit = (c, wx, wz) => {
       const noTree = (cx, cz, hx, hz) => (blocks.noTree ??= []).push({ x: wx + cx, z: wz + cz, hx, hz });
       // Plaque de façade : le nom de l'école, lisible de près.
-      const plate = (text, w, px2, y, pz2, ry = 0) => {
+      const plate = (text, w, px2, y, pz2, ry = 0, band = '#2f80c3') => {
         const cv = document.createElement('canvas');
         cv.width = 256; cv.height = 64;
         const k = cv.getContext('2d');
         k.fillStyle = '#ffffff'; k.fillRect(0, 0, 256, 64);
-        k.fillStyle = blue; k.fillRect(0, 54, 256, 10);
+        k.fillStyle = band; k.fillRect(0, 54, 256, 10);
         k.fillStyle = '#1d2533'; k.font = '700 38px "Space Grotesk", Arial, sans-serif'; k.textAlign = 'center'; k.textBaseline = 'middle';
         k.fillText(text, 128, 28);
         const tex = new THREE.CanvasTexture(cv);
@@ -412,7 +387,7 @@ export function buildWorld(scene) {
       let carK = 0;
       const parking = (cx, cz, cols, rows) => {
         const w = cols * 3, d = rows * 7 + 2;
-        flat(w + 2, d, cx, cz, asphalt, 0.08);
+        flat(w + 2, d, cx, cz, '#5b6574', 0.08);
         for (let r = 0; r < rows; r++) {
           const rz = cz - d / 2 + 1 + r * 7 + 3.5;
           for (let i = 0; i <= cols; i++) flat(0.18, 5, cx - w / 2 + i * 3, rz, '#f6f1e7', 0.1);
@@ -427,13 +402,41 @@ export function buildWorld(scene) {
         carK++;
         noTree(cx, cz, w / 2 + 1, d / 2);
       };
-
-      // Pelouse aux bords arrondis : courbe lissée passant par quelques points (coordonnées du campus).
-      const lawn = (pts) => {
+      // Pelouse (ou neige) aux bords arrondis : courbe lissée passant par quelques points.
+      const lawn = (pts, color = '#8fc46d', y = 0.04) => {
         const curve = new THREE.CatmullRomCurve3(pts.map(([lx, lz]) => new THREE.Vector3(lx, 0, lz)), true, 'centripetal');
         const shape = new THREE.Shape(curve.getSpacedPoints(64).map((v) => new THREE.Vector2(v.x, -v.z)));
-        c.add(new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, 0.04, 0), toon('#8fc46d')));
+        c.add(new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, y, 0), toon(color)));
       };
+      // Pignon en V (toit à deux pans) le long de z, posé à la hauteur y.
+      const gable = (w, d, h, cx, y, cz, color) => {
+        const tri = new THREE.Shape([new THREE.Vector2(-w / 2, 0), new THREE.Vector2(w / 2, 0), new THREE.Vector2(0, h)]);
+        c.add(solid(new THREE.ExtrudeGeometry(tri, { depth: d, bevelEnabled: false }).translate(cx, y, cz - d / 2), color, { outlineWidth: 0.1 }));
+      };
+      return { noTree, plate, flat, parking, lawn, gable };
+    };
+    // Une école : étiquette, zone (fiche + carte) et rayon de la zone à pied.
+    const school = (e, cx, cz, r, ax, ay, az) => {
+      labels.push({ pos: new THREE.Vector3(ax, ay + 1.5, az), html: e.school, cls: 'label-place', zone: e.id, hideInZone: true });
+      zones.push({
+        id: e.id, x: cx, z: cz, r: 0, land: { x: cx, z: cz, r },
+        anchor: new THREE.Vector3(ax, ay, az), geo: { ...e.geo, place: e.place, flag: e.flag },
+        card: { brand: e.brand, logo: e.logo, kicker: e.dates, title: e.school, sub: e.degree, tags: e.tags, body: e.body, meta: e.place, accent: e.brand.color },
+      });
+    };
+    const [poly, lycee, guelph] = EDUCATION;
+
+    // Polytech Nantes, site de la Chantrerie, d'après la vue aérienne :
+    // IRESTE = la longue halle (aile basse en sheds devant), ISITEM = la rotonde derrière, de l'autre côté de la route,
+    // IHT = le bâtiment aux voûtes blanches à l'avant ; parkings, pelouses et cheminements entre les bâtiments.
+    {
+      const px = at.polytech[0], pz = at.polytech[1];
+      const c = new THREE.Group();
+      c.position.set(px, top, pz);
+      g.add(c);
+      const white = '#f4f6f8', glass = '#4aa3df', blue = '#2f80c3', pave = '#d9d4c8', grey = '#c3cad3', roofGrey = '#7d8896', asphalt = '#5b6574';
+      const wx = x + px, wz = z + pz;
+      const { noTree, plate, flat, parking, lawn } = campusKit(c, wx, wz);
       // Côté sud : entre la route nord et la route en anneau, sans déborder sur l'une ni l'autre.
       lawn([[-30, -12], [-12, -13], [16, -13], [27, -9], [26, 6], [14, 15], [2, 25], [-18, 26], [-29, 17], [-32, 2]]);
       // Sol : parvis et cheminements.
@@ -514,39 +517,115 @@ export function buildWorld(scene) {
       );
       blocks.circles.push({ x: wx + rx - 3.5, z: wz + rz, r: 7.5 }, { x: wx + rx + 3.5, z: wz + rz, r: 7.5 });
       noTree(rx, rz, 13, 10);
-      labels.push({ pos: new THREE.Vector3(wx + IX, top + 20.5, wz + IZ), html: poly.school, cls: 'label-place', zone: poly.id, hideInZone: true });
-      zones.push({
-        id: poly.id, x: wx - 8, z: wz - 4, r: 0, land: { x: wx - 8, z: wz - 4, r: 34 },
-        anchor: new THREE.Vector3(wx + IX, top + 19, wz + IZ), geo: { ...poly.geo, place: poly.place, flag: poly.flag },
-        card: { brand: poly.brand, logo: poly.logo, kicker: poly.dates, title: poly.school, sub: poly.degree, tags: poly.tags, body: poly.body, meta: poly.place, accent: poly.brand.color },
-      });
+      school(poly, wx - 8, wz - 4, 34, wx + IX, top + 19, wz + IZ);
     }
 
-    // Lycée de Brest : pierre claire et toit d'ardoise.
-    building(lycee, at.ronarch[0], at.ronarch[1], (b) => {
-      b.add(solid(new THREE.BoxGeometry(18, 7, 10).translate(0, 3.5, 0), '#efe6d2', { outlineWidth: 0.18 }));
-      const roof = new THREE.CylinderGeometry(0, 7.4, 5, 4, 1).rotateY(Math.PI / 4).scale(1.75, 1, 1).translate(0, 9.5, 0);
-      b.add(solid(roof, '#55657a', { outlineWidth: 0.15 }));
-      for (let k = -2; k <= 2; k++) b.add(solid(new THREE.BoxGeometry(1.6, 2.2, 0.3).translate(k * 3.4, 3.8, 5.1), '#2d3a4f', { outlineWidth: 0 }));
-    }, 16, [9.5, 5.5]);
+    // Lycée Amiral Ronarc'h (Brest), d'après la vue aérienne : un bloc à patios, une longue barre plus haute à l'est,
+    // le gymnase au toit brun au sud-est, un petit bâtiment au sud ; le parking est au nord, de l'autre côté de la route.
+    {
+      const lx = at.ronarch[0], lz = at.ronarch[1];
+      const c = new THREE.Group();
+      c.position.set(lx, top, lz);
+      g.add(c);
+      const wx = x + lx, wz = z + lz;
+      const { noTree, plate, flat, parking, lawn, gable } = campusKit(c, wx, wz);
+      const concrete = '#e6e2d8', parapet = '#8d96a3', windows = '#3d5266', pave = '#d9d4c8';
+      lawn([[-15, -13], [4, -14], [19, -13], [21, 0], [17, 10], [2, 11], [-14, 10], [-17, -2]]);
+      lawn([[-14, -26], [10, -26], [24, -27], [25, -38], [8, -42], [-12, -40]]);
+      flat(12, 6, 4, 7, pave); // cour
+      flat(3, 6, 2, -18, pave); // vers le parking
+      noTree(2, 0, 20, 12);
+      // Bloc principal à patios : toit plat, deux patios plantés, lanterneaux.
+      c.add(solid(new THREE.BoxGeometry(16, 7, 13).translate(-4, 3.5, -8), concrete, { outlineWidth: 0.16 }));
+      for (const y of [2.4, 5.1]) c.add(solid(new THREE.BoxGeometry(16.2, 1, 13.2).translate(-4, y, -8), windows, { outlineWidth: 0.04 }));
+      c.add(solid(new THREE.BoxGeometry(16.3, 0.4, 13.3).translate(-4, 7.2, -8), parapet, { outlineWidth: 0.08 }));
+      for (const [px2, pz2] of [[-8.5, -10], [-0.5, -6]]) {
+        c.add(solid(new THREE.BoxGeometry(4.2, 0.3, 4.2).translate(px2, 7.4, pz2), '#5f7f52', { outlineWidth: 0.05 }));
+        c.add(solid(new THREE.IcosahedronGeometry(0.9, 0).translate(px2, 8.2, pz2), '#4f8a3c', { outlineWidth: 0.05 }));
+      }
+      for (const [sx, sz] of [[-10, -4], [-6, -4], [2, -12], [-2, -12.5]]) c.add(solid(new THREE.BoxGeometry(1.4, 0.6, 1.4).translate(sx, 7.6, sz), '#cfd6e0', { outlineWidth: 0.04 }));
+      // Barre est, un étage de plus.
+      c.add(solid(new THREE.BoxGeometry(6, 10, 19).translate(8, 5, -5), '#dcd8cf', { outlineWidth: 0.16 }));
+      for (const y of [2.4, 5.4, 8.4]) c.add(solid(new THREE.BoxGeometry(6.2, 1, 19.2).translate(8, y, -5), windows, { outlineWidth: 0.04 }));
+      c.add(solid(new THREE.BoxGeometry(6.3, 0.4, 19.3).translate(8, 10.2, -5), '#5d6673', { outlineWidth: 0.08 }));
+      // Gymnase : toit brun à deux pans.
+      c.add(solid(new THREE.BoxGeometry(7, 5, 10).translate(14.7, 2.5, 2), '#d8d0c2', { outlineWidth: 0.14 }));
+      gable(7.6, 10.4, 1.8, 14.7, 5, 2, '#8a5a44');
+      // Petit bâtiment au sud, abri à vélos à l'ouest.
+      c.add(solid(new THREE.BoxGeometry(6, 4, 5).translate(-7, 2, 6.5), concrete, { outlineWidth: 0.12 }));
+      c.add(solid(new THREE.BoxGeometry(6.2, 0.4, 5.2).translate(-7, 4.2, 6.5), parapet, { outlineWidth: 0.06 }));
+      c.add(solid(new THREE.BoxGeometry(2, 0.25, 7).translate(-14, 2.4, -6), '#9aa3ad', { outlineWidth: 0.05 }));
+      for (const pz2 of [-9, -3]) c.add(solid(new THREE.CylinderGeometry(0.1, 0.1, 2.4, 4).translate(-14, 1.2, pz2), '#55607a', { outlineWidth: 0 }));
+      plate('RONARC’H', 5, -4, 6, -1.42, 0, '#14275b');
+      // Parking au nord, de l'autre côté de la route.
+      parking(4, -31, 6, 1);
+      c.add(sign(lycee, 16).translateX(-4).translateZ(-8));
+      blocks.boxes.push(
+        { x: wx - 4, z: wz - 8, hx: 8.2, hz: 6.7 }, { x: wx + 8, z: wz - 5, hx: 3.2, hz: 9.7 },
+        { x: wx + 14.7, z: wz + 2, hx: 3.7, hz: 5.2 }, { x: wx - 7, z: wz + 6.5, hx: 3.2, hz: 2.7 },
+      );
+      school(lycee, wx + 2, wz - 3, 26, wx - 4, top + 17, wz - 8);
+    }
 
-    // Guelph : brique rouge, tour de l'horloge… et un coin de Canada sous la neige.
-    building(guelph, at.guelph[0], at.guelph[1], (b) => {
-      b.add(new THREE.Mesh(new THREE.CircleGeometry(15, 14).rotateX(-Math.PI / 2).translate(0, 0.03, 2), toon('#f6fbff')));
-      b.add(solid(new THREE.BoxGeometry(16, 8, 9).translate(0, 4, 0), '#a8483a', { outlineWidth: 0.18 }));
-      b.add(solid(new THREE.BoxGeometry(16.6, 0.8, 9.6).translate(0, 8.2, 0), '#f6fbff', { outlineWidth: 0.1 }));
-      b.add(solid(new THREE.BoxGeometry(4, 15, 4).translate(-5, 7.5, -1), '#93392d', { outlineWidth: 0.15 }));
-      b.add(solid(new THREE.ConeGeometry(3.4, 4, 4).rotateY(Math.PI / 4).translate(-5, 17, -1), '#3f7d5c', { outlineWidth: 0.12 }));
-      b.add(solid(new THREE.CylinderGeometry(1.2, 1.2, 0.3, 12).rotateX(Math.PI / 2).translate(-5, 12, 1.1), '#ffffff', { outlineWidth: 0.05 }));
-      [[-11, 7], [9, 8], [12, -2]].forEach(([tx, tz], k) => {
-        b.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 5).translate(tx, 1.2, tz), PALETTE.wood, { outlineWidth: 0.08 }));
-        b.add(solid(new THREE.IcosahedronGeometry(2.4 + k * 0.3, 0).translate(tx, 4.2, tz), k === 1 ? '#e85d2a' : '#d7372b', { outlineWidth: 0.12 }));
+    // Guelph Collegiate Vocational Institute (Ontario), d'après la vue aérienne : la longue aile d'origine en brique
+    // (et sa tour) à l'ouest, un bloc de liaison, le grand bloc carré à lanterneau à l'est, l'aile basse au sud ;
+    // au nord, de l'autre côté de la route, le terrain de sport et le parking. Un coin de Canada sous la neige.
+    {
+      const gx = at.guelph[0], gz = at.guelph[1];
+      const c = new THREE.Group();
+      c.position.set(gx, top, gz);
+      g.add(c);
+      const wx = x + gx, wz = z + gz;
+      const { noTree, plate, flat, parking, lawn } = campusKit(c, wx, wz);
+      const brick = '#a8483a', brickDark = '#93392d', snow = '#f6fbff', stone = '#e9dccb';
+      lawn([[-21, -16], [2, -17], [17, -16], [20, -9], [12, 2], [5, 9], [-6, 11], [-21, 10], [-23, -3]], snow);
+      lawn([[-20, -26], [6, -26], [22, -26], [23, -40], [12, -50], [-10, -50], [-21, -42]], snow);
+      noTree(-4, -3, 18, 12);
+      // Aile ouest d'origine : brique, bandeaux de pierre, toit enneigé.
+      c.add(solid(new THREE.BoxGeometry(7, 8, 20).translate(-15, 4, -5), brick, { outlineWidth: 0.16 }));
+      for (const y of [2.6, 5.6]) c.add(solid(new THREE.BoxGeometry(7.2, 0.35, 20.2).translate(-15, y, -5), stone, { outlineWidth: 0 }));
+      c.add(solid(new THREE.BoxGeometry(7.4, 0.6, 20.4).translate(-15, 8.3, -5), snow, { outlineWidth: 0.08 }));
+      for (let k = 0; k < 6; k++) for (const y of [1.6, 4.4, 7]) c.add(solid(new THREE.BoxGeometry(0.2, 1.2, 1.4).translate(-11.4, y, -13 + k * 3.2), '#2d3a4f', { outlineWidth: 0 }));
+      // La tour, au bout de l'aile, côté rue : flèche verte et horloge.
+      c.add(solid(new THREE.BoxGeometry(4.5, 14, 4.5).translate(-15, 7, 7), brickDark, { outlineWidth: 0.15 }));
+      c.add(solid(new THREE.ConeGeometry(3.7, 4.4, 4).rotateY(Math.PI / 4).translate(-15, 16.2, 7), '#3f7d5c', { outlineWidth: 0.12 }));
+      c.add(solid(new THREE.CylinderGeometry(1.2, 1.2, 0.3, 12).rotateX(Math.PI / 2).translate(-15, 11, 9.3), '#ffffff', { outlineWidth: 0.05 }));
+      // Bloc de liaison.
+      c.add(solid(new THREE.BoxGeometry(9, 6, 8).translate(-6.5, 3, -3), '#c9b8a8', { outlineWidth: 0.14 }));
+      c.add(solid(new THREE.BoxGeometry(9.3, 0.5, 8.3).translate(-6.5, 6.25, -3), snow, { outlineWidth: 0.06 }));
+      // Grand bloc carré à l'est, toit plat et lanterneau central.
+      c.add(solid(new THREE.BoxGeometry(13, 7, 13).translate(5.5, 3.5, -8), '#b4594a', { outlineWidth: 0.16 }));
+      c.add(solid(new THREE.BoxGeometry(13.3, 0.5, 13.3).translate(5.5, 7.25, -8), snow, { outlineWidth: 0.08 }));
+      c.add(solid(new THREE.BoxGeometry(4, 1.8, 4).translate(5.5, 8.4, -8), '#9fb3c4', { outlineWidth: 0.08 }));
+      c.add(solid(new THREE.BoxGeometry(4.3, 0.3, 4.3).translate(5.5, 9.45, -8), snow, { outlineWidth: 0.04 }));
+      // Aile basse au sud, toit blanc.
+      c.add(solid(new THREE.BoxGeometry(8, 4.5, 8).translate(-5, 2.25, 6), '#d9cfc4', { outlineWidth: 0.12 }));
+      c.add(solid(new THREE.BoxGeometry(8.3, 0.4, 8.3).translate(-5, 4.65, 6), snow, { outlineWidth: 0.06 }));
+      plate('GCVI', 3.4, -5, 3.4, 10.06, 0, '#a8483a');
+      // Érables rouges et drapeau devant l'entrée.
+      [[-21, 4], [8, 3], [-19, -14]].forEach(([tx, tz], k) => {
+        c.add(solid(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 5).translate(tx, 1.2, tz), PALETTE.wood, { outlineWidth: 0.08 }));
+        c.add(solid(new THREE.IcosahedronGeometry(2.2 + k * 0.3, 0).translate(tx, 4, tz), k === 1 ? '#e85d2a' : '#d7372b', { outlineWidth: 0.12 }));
       });
       const f = flag('CA', 9);
-      f.position.set(7, 0, 5);
-      b.add(f);
+      f.position.set(2, 0, 8);
+      c.add(f);
+      f.userData.dynamic = true;
       anim.push((dt, t) => { f.userData.cloth.rotation.y = Math.sin(t * 3) * 0.3; });
-    }, 21, [8.5, 5]);
+      // Au nord : terrain de sport (lignes blanches), losange de baseball et parking.
+      flat(22, 13, -7, -35, '#6fae55', 0.07);
+      for (const [w, d, cx, cz] of [[22, 0.25, -7, -41.4], [22, 0.25, -7, -28.6], [0.25, 13, -17.9, -35], [0.25, 13, 3.9, -35], [0.25, 13, -7, -35]]) flat(w, d, cx, cz, '#ffffff', 0.09);
+      c.add(new THREE.Mesh(new THREE.CircleGeometry(9, 12, 0, Math.PI / 2).rotateX(-Math.PI / 2).rotateY(Math.PI * 0.75).translate(12, 0.08, -38), toon('#d9c49a')));
+      noTree(-7, -35, 12, 7);
+      noTree(12, -42, 8, 8);
+      parking(14, -29, 4, 1);
+      c.add(sign(guelph, 17).translateX(-6.5).translateZ(-3));
+      blocks.boxes.push(
+        { x: wx - 15, z: wz - 5, hx: 3.7, hz: 10.2 }, { x: wx - 15, z: wz + 7, hx: 2.4, hz: 2.4 }, { x: wx - 6.5, z: wz - 3, hx: 4.7, hz: 4.2 },
+        { x: wx + 5.5, z: wz - 8, hx: 6.7, hz: 6.7 }, { x: wx - 5, z: wz + 6, hx: 4.2, hz: 4.2 },
+      );
+      school(guelph, wx - 4, wz - 3, 26, wx - 6.5, top + 17, wz - 3);
+    }
 
   }
 
