@@ -579,7 +579,9 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .label-title b { font-size: 12px; }
   .toast { font-size: 11px; bottom: 50px; }
   /* Carte de localisation : une vignette à droite, sous les instruments. */
-  #stamp, #stamp.regattas, #stamp.simple { left: auto; right: 6px; width: 180px; top: 70px; }
+  /* La fiche flotte en haut à gauche, à la hauteur de son contenu ; la vignette de carte se range dessous. */
+  .card.docked { top: 8px; bottom: auto; left: 8px; max-height: calc(100vh - 16px); border-radius: 14px; border-left: 2.5px solid var(--ink); }
+  #stamp, #stamp.regattas, #stamp.simple { top: auto; bottom: 8px; left: 8px; right: auto; width: 150px; }
 }
 
 /* Croix de fermeture du volet (téléphone) et onglet pour le rouvrir. */
@@ -642,7 +644,7 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .photo-frame .close { position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper); font: inherit; font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink); }
 
 /* Téléphone en portrait : la fiche devient un tiroir en bas de l'écran, la scène garde toute la largeur. */
-@media (max-width: 640px) and (orientation: portrait), (pointer: coarse) and (max-width: 950px) and (orientation: portrait) {
+@media (max-width: 640px) and (orientation: portrait), (max-width: 950px) and (orientation: portrait) {
   .card.docked { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 42vh; border-radius: 16px 16px 0 0; border-left: 2.5px solid var(--ink); border-bottom: 0; }
   .card.docked.pop { animation: slide-up .32s cubic-bezier(.2, .9, .3, 1); }
   #stamp, #stamp.regattas, #stamp.simple { top: 56px; left: auto; right: 8px; width: min(40vw, 150px); }
