@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon } from './toon.js?v=20261008115124';
-import { navLights } from './island.js?v=20261008115124';
+import { solid, toon } from './toon.js?v=20261008115703';
+import { navLights } from './island.js?v=20261008115703';
 
 // Petit match race en boucle à côté de la bouée « Sportif de haut niveau », pour le décor :
 // procédure de départ en tournant, louvoyage où les bateaux se croisent, bouée au vent, retour au portant.

@@ -182,7 +182,6 @@ kbd { font: inherit; font-weight: 700; border: 1.5px solid var(--ink); border-bo
 }
 
 /* L'intro laisse voir la scène : panneau en bas, fond dégradé. */
-#intro { place-items: end center; background: linear-gradient(to top, rgba(29, 37, 51, .45), transparent 60%); backdrop-filter: none; padding-bottom: 28px; }
 .overlay { z-index: 6; } /* au-dessus du volet de fiche (4) et de la carte */
 .card .logo[hidden] { display: none; }
 
@@ -656,3 +655,54 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .toast { bottom: calc(var(--sheet-h, 0px) + 58px); }
 }
 @keyframes slide-up { from { transform: translateY(100%); } to { transform: none; } }
+
+/* ============ Écran de choix du véhicule ============ */
+.picker { position: fixed; inset: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr auto; transition: opacity .6s; }
+.picker[hidden] { display: none; }
+.picker.leaving { opacity: 0; pointer-events: none; }
+.picker #intro-gl { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.picker-head { grid-column: 1 / -1; grid-row: 1; z-index: 2; text-align: center; padding: 26px 16px 0; pointer-events: none; }
+.picker-head h1 { margin: 4px 0 6px; font-size: clamp(30px, 5vw, 56px); line-height: 1; }
+.picker-lead { margin: 0 auto; max-width: 560px; color: var(--ink-soft); font-size: 15px; }
+.pick { grid-row: 1 / 4; position: relative; border: 0; margin: 0; padding: 0; font: inherit; color: var(--ink); cursor: pointer; display: grid; grid-template-rows: 1fr auto; text-align: left; transition: filter .2s; }
+.pick-sail { grid-column: 1; background: radial-gradient(ellipse at 50% 58%, #fff6e8 0%, #f6e7cf 55%, #ead3b0 100%); }
+.pick-rib { grid-column: 2; background: radial-gradient(ellipse at 50% 58%, #eaf6ff 0%, #cfe7f7 55%, #a9d1ec 100%); border-left: 3px solid var(--ink); }
+.pick:hover, .pick:focus-visible { filter: saturate(1.15) brightness(1.03); outline: none; }
+.pick-stage { display: block; min-height: 0; }
+.pick-info { z-index: 2; display: grid; gap: 6px; justify-items: center; text-align: center; padding: 0 18px 92px; }
+.pick-info b { font-size: clamp(22px, 2.6vw, 32px); }
+.pick-info small { font-size: 14px; color: var(--ink-soft); }
+.stats { display: grid; gap: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-top: 4px; }
+.stats > span { display: grid; grid-template-columns: 96px 100px; align-items: center; gap: 8px; text-align: right; }
+.stats i { height: 8px; border-radius: 4px; border: 1.5px solid var(--ink); background: linear-gradient(90deg, var(--accent) calc(var(--v) * 20%), #fff 0); }
+.go { margin-top: 8px; padding: 10px 22px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 15px; box-shadow: 0 4px 0 rgba(29, 37, 51, .3); transition: transform .15s; }
+.pick:hover .go { transform: translateY(-2px); background: var(--accent); }
+.picker-foot { grid-column: 1 / -1; grid-row: 3; z-index: 2; display: flex; justify-content: center; align-items: center; gap: 18px; padding: 0 16px 22px; pointer-events: none; }
+.picker-foot > * { pointer-events: auto; }
+.picker-foot .keys { margin: 0; }
+@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) and (orientation: portrait) {
+  /* Portrait : les deux véhicules l'un au-dessus de l'autre. */
+  .picker { grid-template-columns: 1fr; grid-template-rows: auto 1fr 1fr auto; }
+  .picker-head { padding-top: 14px; background: linear-gradient(#fff6e8, rgba(255, 246, 232, 0)); }
+  .picker-head h1 { font-size: 28px; }
+  .picker-lead { font-size: 12.5px; }
+  .pick { grid-row: auto; grid-template-rows: 1fr auto; }
+  .pick-sail { grid-column: 1; grid-row: 1 / 3; }
+  .pick-rib { grid-column: 1; grid-row: 3 / 5; border-left: 0; border-top: 3px solid var(--ink); }
+  .pick-info { padding: 0 12px 12px; gap: 3px; }
+  .pick-rib .pick-info { padding-bottom: 58px; }
+  .pick-info small { font-size: 12px; }
+  .stats { display: none; }
+  .go { padding: 7px 16px; font-size: 13px; margin-top: 4px; }
+  .picker-foot { grid-row: 4; padding-bottom: 12px; }
+  .picker-foot .keys { display: none; }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  .picker-head { padding-top: 8px; }
+  .picker-head h1 { font-size: 24px; }
+  .picker-lead { display: none; }
+  .pick-info { padding-bottom: 46px; gap: 2px; }
+  .stats { display: none; }
+  .picker-foot { padding-bottom: 8px; }
+  .picker-foot .keys { display: none; }
+}

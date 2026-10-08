@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261008115124">
+  <link rel="stylesheet" href="style.css?v=20261008115703">
   <script type="importmap">
     {
       "imports": {
@@ -146,27 +146,35 @@
   <button id="action" class="btn action" hidden></button>
   <div id="hint" class="hint">← → pour tourner · ↑ accélérer · ou garde le clic enfoncé là où tu veux aller</div>
 
-  <section id="intro" class="overlay">
-    <div class="panel">
-      <p class="eyebrow">Portfolio</p>
-      <h1 id="intro-name"></h1>
-      <p id="intro-title" class="lead"></p>
-      <p>Navigue entre les bouées : chacune raconte une étape de mon parcours. L’île t’attend au nord.</p>
-      <p class="ask">Tu navigues ?</p>
-      <div class="choices">
-        <button class="choice" id="start-sail"><span class="ico">⛵</span><b>Oui, je navigue</b><small>Tu barres un foiler : le vent compte, et il vole.</small></button>
-        <button class="choice" id="start-rib"><span class="ico">🚤</span><b>Non, pas vraiment</b><small>Tu pilotes un semi-rigide : ça se conduit comme une voiture.</small></button>
-      </div>
-      <div class="keys">
-        <span><kbd>←</kbd><kbd>→</kbd> tourner</span>
-        <span><kbd>↑</kbd> accélérer</span>
-        <span><kbd>↓</kbd> freiner</span>
-        <span>🖱️ / 👆 maintenir pour aller vers un point</span>
-      </div>
-      <div class="actions">
-        <button class="btn ghost" data-open-cv>Version rapide</button>
-      </div>
-    </div>
+  <section id="intro" class="picker">
+    <canvas id="intro-gl" aria-hidden="true"></canvas>
+    <header class="picker-head">
+      <p class="eyebrow"><span id="intro-name"></span> · <span id="intro-title"></span></p>
+      <h1>Choisis ton véhicule</h1>
+      <p class="picker-lead">Navigue entre les bouées : chacune raconte une étape de mon parcours. L’île t’attend au nord.</p>
+    </header>
+    <button class="pick pick-sail" id="start-sail">
+      <span class="pick-stage"></span>
+      <span class="pick-info">
+        <b>Voilier à foils</b>
+        <small>Tu navigues : le vent compte, et il vole.</small>
+        <span class="stats"><span>Vitesse <i style="--v:5"></i></span><span>Sensations <i style="--v:5"></i></span><span>Facilité <i style="--v:2"></i></span></span>
+        <span class="go">Je navigue →</span>
+      </span>
+    </button>
+    <button class="pick pick-rib" id="start-rib">
+      <span class="pick-stage"></span>
+      <span class="pick-info">
+        <b>Semi-rigide</b>
+        <small>Pas navigant ? Ça se conduit comme une voiture.</small>
+        <span class="stats"><span>Vitesse <i style="--v:3"></i></span><span>Sensations <i style="--v:3"></i></span><span>Facilité <i style="--v:5"></i></span></span>
+        <span class="go">Je pilote →</span>
+      </span>
+    </button>
+    <footer class="picker-foot">
+      <span class="keys"><span><kbd>←</kbd><kbd>→</kbd> tourner</span><span><kbd>↑</kbd> accélérer</span><span><kbd>↓</kbd> freiner</span><span>🖱️ / 👆 maintenir pour aller vers un point</span></span>
+      <button class="btn ghost" data-open-cv>Version rapide</button>
+    </footer>
   </section>
 
   <section id="cv" class="overlay" hidden>
@@ -176,6 +184,6 @@
     </div>
   </section>
 
-  <script type="module" src="src/main.js?v=20261008115124"></script>
+  <script type="module" src="src/main.js?v=20261008115703"></script>
 </body>
 </html>

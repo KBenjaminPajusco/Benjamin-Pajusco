@@ -1,16 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008115124';
-import { buildWorld, LAYOUT } from './world.js?v=20261008115124';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008115124';
-import { Walker } from './walker.js?v=20261008115124';
-import { Rib } from './rib.js?v=20261008115124';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008115124';
-import { STEPS, TEAM } from './cafe.js?v=20261008115124';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008115124';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008115124';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008115124';
-import { Race, COURSE } from './race.js?v=20261008115124';
-import { StaticMerger } from './optimize.js?v=20261008115124';
+import { Boat } from './boat.js?v=20261008115703';
+import { buildWorld, LAYOUT } from './world.js?v=20261008115703';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008115703';
+import { Walker } from './walker.js?v=20261008115703';
+import { Rib } from './rib.js?v=20261008115703';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008115703';
+import { STEPS, TEAM } from './cafe.js?v=20261008115703';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008115703';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008115703';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008115703';
+import { Race, COURSE } from './race.js?v=20261008115703';
+import { StaticMerger } from './optimize.js?v=20261008115703';
+import { solid } from './toon.js?v=20261008115703';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -86,7 +87,7 @@ addEventListener('keydown', (e) => {
   if ($('#savoirs').hidden === false) { if (e.key === 'Escape') $('#savoirs').hidden = true; return; }
   if (e.key.toLowerCase() === 'm' && started) { openMap(); return; }
   if (e.key.toLowerCase() === 'e' && started) { doAction(); return; }
-  if (!started) start();
+  if (!started) { if (cine.phase === 'menu') start(); else skipCine(); }
   keys.add(e.key.toLowerCase());
   if (e.key.startsWith('Arrow')) e.preventDefault();
 });
@@ -95,7 +96,7 @@ addEventListener('blur', () => keys.clear());
 
 const pointer = { active: false, ndc: new THREE.Vector2() };
 canvas.addEventListener('pointerdown', (e) => {
-  if (!started) start();
+  if (!started) { if (cine.phase === 'menu') start(); else skipCine(); }
   pointer.active = true;
   setPointer(e);
   canvas.setPointerCapture(e.pointerId);
@@ -223,7 +224,7 @@ const toScreen = (v) => {
 };
 function updateLabels(focus) {
   const zoneId = activeZone?.id;
-  const overworld = ow > 0.5;
+  const overworld = ow > 0.5 || cineOverview; // noms des régions pendant le survol de l'intro
   for (const l of labels) {
     // Carte du monde : seuls les grands noms de régions ; sinon, tous les détails sauf ces noms.
     if (!!l.overworld !== overworld) { if (l.op !== 0) { l.op = 0; l.el.style.opacity = 0; } continue; }
@@ -902,9 +903,9 @@ $('#intro-title').textContent = `${PROFILE.title} · ${PROFILE.tagline}`;
 // Navigant : le foiler, avec le vent. Sinon (ou sans réponse) : un semi-rigide à moteur.
 const SAILOR_BY_DEFAULT = new URLSearchParams(location.search).has('navigant');
 function start(choice = SAILOR_BY_DEFAULT ? 'sail' : 'rib') {
-  if (started) return;
-  started = true;
-  $('#intro').hidden = true;
+  if (started || cine.phase !== 'menu') return;
+  cine = { phase: 'fly', t: 0 };
+  closePicker();
   if (choice === 'rib') {
     const rib = new Rib();
     rib.pos.copy(boat.pos);
@@ -914,6 +915,71 @@ function start(choice = SAILOR_BY_DEFAULT ? 'sail' : 'rib') {
     boat = rib;
     $('.readout .small').textContent = 'semi-rigide · moteur';
   }
+}
+// --- Écran de choix : l'AC40 et le semi-rigide tournent sur eux-mêmes, chacun sur son socle, dans sa moitié d'écran.
+// Un petit rendu dédié, libéré dès que le choix est fait.
+const picker = (() => {
+  const cv = $('#intro-gl');
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  r.setClearColor(0x000000, 0);
+  const sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight('#ffffff', '#c9b79a', 1.5));
+  const key = new THREE.DirectionalLight('#ffffff', 2.2);
+  key.position.set(20, 40, 30);
+  sc.add(key);
+  const showcase = (model, x, size) => {
+    const pivot = new THREE.Group();
+    pivot.position.x = x;
+    model.update(0, { steer: 0, power: 0, brake: true }, null);
+    pivot.add(model.root);
+    // Socle : un disque d'eau cerclé, comme un objet présenté en vitrine.
+    pivot.add(solid(new THREE.CylinderGeometry(size * 0.62, size * 0.66, 0.8, 40).translate(0, -0.6, 0), '#2c7fb8', { outlineWidth: 0.12 }));
+    pivot.add(solid(new THREE.CylinderGeometry(size * 0.7, size * 0.72, 0.5, 40).translate(0, -1.1, 0), '#f6f1e7', { outlineWidth: 0.12 }));
+    sc.add(pivot);
+    const cam = new THREE.PerspectiveCamera(30, 1, 1, 400);
+    return { pivot, cam, x, size, speed: 0.5, hover: false };
+  };
+  const sail = showcase(new Boat(), -60, 17);
+  const rib = showcase(new Rib(), 60, 9);
+  const items = [[sail, $('#start-sail')], [rib, $('#start-rib')]];
+  for (const [it, el] of items) {
+    el.addEventListener('pointerenter', () => { it.hover = true; });
+    el.addEventListener('pointerleave', () => { it.hover = false; });
+  }
+  let alive = true;
+  return {
+    render(dt) {
+      if (!alive) return;
+      const w = innerWidth, h = innerHeight;
+      if (cv.width !== Math.round(w * r.getPixelRatio())) r.setSize(w, h, false);
+      r.setScissorTest(true);
+      r.clear();
+      for (const [it, el] of items) {
+        const stage = el.querySelector('.pick-stage').getBoundingClientRect();
+        if (stage.width < 10 || stage.height < 10) continue;
+        it.speed = THREE.MathUtils.damp(it.speed, it.hover ? 2.2 : 0.55, 4, dt);
+        it.pivot.rotation.y += it.speed * dt;
+        // Cadrage : le véhicule et son socle tiennent dans la scène, quelle que soit sa forme.
+        const fit = it.size * 3.1 / Math.min(1, (stage.width / stage.height) * 0.85);
+        it.cam.aspect = stage.width / stage.height;
+        it.cam.position.set(it.x, it.size * 0.6 + fit * 0.32, fit);
+        it.cam.lookAt(it.x, it.size * 0.32, 0);
+        it.cam.updateProjectionMatrix();
+        const y = h - stage.bottom;
+        r.setViewport(stage.left, y, stage.width, stage.height);
+        r.setScissor(stage.left, y, stage.width, stage.height);
+        r.render(sc, it.cam);
+      }
+      r.setScissorTest(false);
+    },
+    dispose() { alive = false; r.dispose(); r.forceContextLoss(); },
+  };
+})();
+function closePicker() {
+  const el = $('#intro');
+  el.classList.add('leaving');
+  setTimeout(() => { el.hidden = true; picker.dispose(); }, 650);
 }
 $('#start-sail').addEventListener('click', () => start('sail'));
 $('#start-rib').addEventListener('click', () => start('rib'));
@@ -957,12 +1023,40 @@ const CAM_OFFSET = new THREE.Vector3(0, 125, 82);
 // C'est aussi la vue d'arrivée sur la page : on découvre tout le plan d'eau et le nom au départ.
 const OVERWORLD = { x: 25, z: -45, zoom: 8.6, boatScale: 4.6, travel: 2.4 };
 const INTRO_VIEW = { x: OVERWORLD.x, z: OVERWORLD.z, zoom: 1 };
-let ow = 1;
+let ow = 0;
 let frozen = false;
 let walkZoomS = 1;
 let dayTimer = 0;
+// --- Intro : le menu s'affiche sur la mer (l'île hors champ) ; au choix, la caméra s'élève pour survoler
+// toute l'île, puis plonge sur le bateau et l'expérience commence. Un clic ou une touche passe le survol.
+const CINE = { fly: 2.6, hold: 1.6, dive: 2.6 };
+const ISLAND_VIEW = { x: 15, z: -298, w: 520, d: 380 }; // centre et emprise de l'île (pour la cadrer entière)
+let cine = { phase: 'menu', t: 0 };
+let cineOverview = false;
+const smooth = (u) => u * u * (3 - 2 * u);
+function skipCine() { if (cine.phase === 'fly' && cine.t > 0.3) cine.t = Math.max(cine.t, CINE.fly + CINE.hold); }
+function cinePose(dt) {
+  if (cine.phase === 'done') return null;
+  const menu = { x: boat.pos.x + 3, z: boat.pos.y + 3, zoom: 0.55 };
+  if (cine.phase === 'menu') return menu;
+  cine.t += dt;
+  // L'île entière dans l'image, quelle que soit la forme de l'écran.
+  const island = { x: ISLAND_VIEW.x, z: ISLAND_VIEW.z, zoom: Math.max(ISLAND_VIEW.d / 96, ISLAND_VIEW.w / (80 * camera.aspect)) };
+  const play = { x: boat.pos.x, z: boat.pos.y, zoom: portrait() ? 1.5 : 1 };
+  const mix = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, zoom: Math.exp(Math.log(a.zoom) + (Math.log(b.zoom) - Math.log(a.zoom)) * u) });
+  const { fly, hold, dive } = CINE, t = cine.t;
+  cineOverview = t > fly * 0.6 && t < fly + hold + dive * 0.35;
+  if (t < fly) return mix(menu, island, smooth(t / fly));
+  if (t < fly + hold) return island;
+  if (t < fly + hold + dive) return mix(island, play, smooth((t - fly - hold) / dive));
+  cine.phase = 'done';
+  cineOverview = false;
+  started = true;
+  focus.set(play.x, 0, play.z);
+  return null;
+}
 const OVERWORLD_TRAVEL = false; // true : gros bateau + vue globale entre les régions (essai JRPG)
-const focus = new THREE.Vector3(INTRO_VIEW.x, 0, INTRO_VIEW.z);
+const focus = new THREE.Vector3(INTRO_VIEW.x, 0, INTRO_VIEW.z); // recalé sur le bateau dès la première image
 let zoneZoom = 1;
 camera.position.copy(focus).add(CAM_OFFSET);
 camera.lookAt(focus);
@@ -992,6 +1086,7 @@ function frame() {
   const raw = clock.getDelta();
   adaptResolution(raw);
   tick(Math.min(raw, 1 / 20));
+  if (!$('#intro').hidden) picker.render(Math.min(raw, 1 / 20));
   window.__pf && window.__pf.frames++;
   requestAnimationFrame(frame);
 }
@@ -1065,7 +1160,7 @@ function tick(dt) {
   streaks.update(dt, focus);
 
   // Vue d'ensemble seulement à l'arrivée sur la page ; le mode « carte du monde » en navigation est désactivé.
-  const travelling = !started || (OVERWORLD_TRAVEL && mode === 'boat' && !world.inRegion(boat.pos));
+  const travelling = OVERWORLD_TRAVEL && started && mode === 'boat' && !world.inRegion(boat.pos);
   ow = THREE.MathUtils.damp(ow, travelling ? 1 : 0, 2.2, dt);
   boat.root.scale.setScalar(1 + (OVERWORLD.boatScale - 1) * ow);
   boat.travel = 1 + (OVERWORLD.travel - 1) * ow;
@@ -1075,8 +1170,8 @@ function tick(dt) {
   zoneZoom = THREE.MathUtils.damp(zoneZoom, activeZone?.zoom ?? 1, 1.5, dt);
   const ahead = boat.forward.multiplyScalar(Math.min(boat.speed, 26) * 1.1);
   // Pendant l'intro, on cadre le bateau et le nom flottant ensemble.
-  let fx = started ? boat.pos.x + ahead.x : INTRO_VIEW.x;
-  let fz = started ? boat.pos.y + ahead.y : INTRO_VIEW.z;
+  let fx = boat.pos.x + (started ? ahead.x : 0);
+  let fz = boat.pos.y + (started ? ahead.y : 0);
   if (mode === 'walk') { fx = framing ? framing.x : walker.pos.x; fz = framing ? framing.z : walker.pos.y; }
   // Téléphone : quand le tiroir de fiche est ouvert en bas, on remonte la scène pour garder le bateau visible.
   // Une zone peut attirer le regard vers ce qu'elle montre (le café, la piste…).
@@ -1109,9 +1204,12 @@ function tick(dt) {
   focus.z = THREE.MathUtils.damp(focus.z, fz, 2.5, dt);
   // À pied : facteur 0,8 = vue un peu plus large, le low poly se lit mieux de plus haut.
   const zoom = THREE.MathUtils.lerp(
-    userZoom * (mode === 'walk' ? 0.8 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * (started ? 1 : INTRO_VIEW.zoom),
+    userZoom * (mode === 'walk' ? 0.8 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * 1,
     OVERWORLD.zoom * (portrait() ? 1.5 : 1), ow);
-  camera.position.set(focus.x + CAM_OFFSET.x * zoom, CAM_OFFSET.y * zoom, focus.z + CAM_OFFSET.z * zoom);
+  const pose = cinePose(dt);
+  if (pose) focus.set(pose.x, 0, pose.z);
+  const camZoom = pose ? pose.zoom : zoom;
+  camera.position.set(focus.x + CAM_OFFSET.x * camZoom, CAM_OFFSET.y * camZoom, focus.z + CAM_OFFSET.z * camZoom);
   camera.lookAt(focus);
 
   sun.position.set(focus.x - 70, 160, focus.z + 50);
