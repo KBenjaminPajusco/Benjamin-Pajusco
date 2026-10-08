@@ -1068,8 +1068,9 @@ function tick(dt) {
   }
   focus.x = THREE.MathUtils.damp(focus.x, fx, 2.5, dt);
   focus.z = THREE.MathUtils.damp(focus.z, fz, 2.5, dt);
+  // À pied : facteur 0,8 = vue un peu plus large, le low poly se lit mieux de plus haut.
   const zoom = THREE.MathUtils.lerp(
-    userZoom * (mode === 'walk' ? 0.6 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * (started ? 1 : INTRO_VIEW.zoom),
+    userZoom * (mode === 'walk' ? 0.8 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * (started ? 1 : INTRO_VIEW.zoom),
     OVERWORLD.zoom * (portrait() ? 1.5 : 1), ow);
   camera.position.set(focus.x + CAM_OFFSET.x * zoom, CAM_OFFSET.y * zoom, focus.z + CAM_OFFSET.z * zoom);
   camera.lookAt(focus);
