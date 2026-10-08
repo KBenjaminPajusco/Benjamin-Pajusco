@@ -736,12 +736,14 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 }
 
 /* Fenêtre de code flottante (le codeur du parc). */
-.label.label-code { padding: 0; background: #0f1724; border: 2px solid #1d2533; border-radius: 10px; color: #d7e3f4; white-space: normal; width: 360px; overflow: hidden; box-shadow: 0 6px 0 rgba(29, 37, 51, .3); }
+.label.label-code { padding: 0; background: #0f1724; border: 2px solid #1d2533; border-radius: 10px; color: #d7e3f4; white-space: normal; width: 440px; overflow: hidden; box-shadow: 0 6px 0 rgba(29, 37, 51, .3); }
 .cw-bar { display: flex; align-items: center; gap: 5px; padding: 5px 8px; background: #1d2533; }
 .cw-bar i { width: 9px; height: 9px; border-radius: 50%; background: #e8404a; }
 .cw-bar i:nth-child(2) { background: #ffc845; }
 .cw-bar i:nth-child(3) { background: #2f9e55; }
 .cw-bar span { margin-left: 6px; font: 600 11px 'JetBrains Mono', monospace; color: #9aa3ad; }
-.cw-body { margin: 0; padding: 8px 10px 10px; min-height: 64px; font: 12px/1.45 'JetBrains Mono', monospace; font-variant-ligatures: none; white-space: pre-wrap; word-break: break-all; color: #b8f2c9; }
+.cw-body { margin: 0; padding: 8px 10px 10px; min-height: 96px; font: 12px/1.45 'JetBrains Mono', monospace; font-variant-ligatures: none; white-space: pre-wrap; word-break: break-all; color: #b8f2c9; }
 .cw-body b { color: #5ff2ff; font-weight: 400; }
+.cw-body em { font-style: normal; color: #7d8aa0; }
+.cw-body u { text-decoration: none; color: #ffc845; }
 @media (max-width: 640px), (pointer: coarse) and (max-width: 950px) { .label.label-code { width: 230px; } .cw-body { font-size: 9.5px; min-height: 44px; } }

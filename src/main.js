@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008151147';
-import { buildWorld, LAYOUT } from './world.js?v=20261008151147';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008151147';
-import { Walker } from './walker.js?v=20261008151147';
-import { Rib } from './rib.js?v=20261008151147';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008151147';
-import { STEPS, TEAM } from './cafe.js?v=20261008151147';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008151147';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008151147';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008151147';
-import { Race, COURSE } from './race.js?v=20261008151147';
-import { StaticMerger } from './optimize.js?v=20261008151147';
-import { solid } from './toon.js?v=20261008151147';
+import { Boat } from './boat.js?v=20261008151501';
+import { buildWorld, LAYOUT } from './world.js?v=20261008151501';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008151501';
+import { Walker } from './walker.js?v=20261008151501';
+import { Rib } from './rib.js?v=20261008151501';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008151501';
+import { STEPS, TEAM } from './cafe.js?v=20261008151501';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008151501';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008151501';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008151501';
+import { Race, COURSE } from './race.js?v=20261008151501';
+import { StaticMerger } from './optimize.js?v=20261008151501';
+import { solid } from './toon.js?v=20261008151501';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -218,33 +218,38 @@ const labels = world.labels.map((l) => {
   labelLayer.appendChild(el);
   return { ...l, el, src: l };
 });
-// Fenêtre de code flottante du codeur : un one-liner tapé caractère par caractère, en boucle (et un vrai résultat).
+// Fenêtre de code flottante du codeur : des classiques d'entretien technique, chacun en une ligne de Python,
+// tapés caractère par caractère puis exécutés (les résultats affichés sont les vrais).
 {
   const body = labels.find((l) => l.cls === 'label-code')?.el.querySelector('.cw-body');
-  const SCRIPT = [
-    '>>> t = []',
-    '>>> t = [n for n in range(2, 60) if all(n % d for d in range(2, n))]',
-    '>>> print(t)',
-    '[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59]',
-    '>>> fizz = ["Fizz"*(i%3<1) + "Buzz"*(i%5<1) or i for i in range(1, 16)]',
-    '>>> fizz[-1]',
-    "'FizzBuzz'",
+  const title = labels.find((l) => l.cls === 'label-code')?.el.querySelector('.cw-bar span');
+  const KATAS = [
+    ['fibonacci.py', '# Fibonacci, mémoïsé dans un argument par défaut', '>>> fib = lambda n, m={}: n if n < 2 else m.get(n) or m.setdefault(n, fib(n-1) + fib(n-2))', '>>> fib(50)', '12586269025'],
+    ['linked_list.py', '# Inverser une liste chaînée (valeur, suivant)', '>>> rev = lambda node, acc=None: acc if node is None else rev(node[1], (node[0], acc))', '>>> rev((1, (2, (3, None))))', '(3, (2, (1, None)))'],
+    ['two_sum.py', '# Two Sum : les indices dont la somme vaut la cible', '>>> two_sum = lambda nums, t: next((i, j) for j, x in enumerate(nums) for i in range(j) if nums[i] + x == t)', '>>> two_sum([2, 7, 11, 15], 9)', '(0, 1)'],
+    ['parentheses.py', '# Parenthèses bien formées, avec une pile réduite', ">>> valid = lambda s: __import__('functools').reduce(lambda st, c: st[:-1] if st[-1:] + c in ('()', '[]', '{}') else st + c, s, '') == ''", '>>> valid("{[()()]}"), valid("([)]")', '(True, False)'],
+    ['anagrams.py', '# Regrouper les anagrammes', '>>> groups = lambda ws: list({tuple(sorted(w)): [v for v in ws if sorted(v) == sorted(w)] for w in ws}.values())', '>>> groups(["eat", "tea", "tan", "ate", "nat"])', "[['eat', 'tea', 'ate'], ['tan', 'nat']]"],
+    ['flatten.py', '# Aplatir une liste imbriquée, récursivement', '>>> flat = lambda l: sum(map(flat, l), []) if isinstance(l, list) else [l]', '>>> flat([1, [2, [3, [4]]]])', '[1, 2, 3, 4]'],
   ];
-  let line = 0, col = 0, wait = 0;
-  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  let kata = 0, line = 1, col = 0, wait = 0;
+  const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const paint = (t) => (t.startsWith('#') ? `<em>${esc(t)}</em>` : t.startsWith('>>>') ? esc(t) : `<u>${esc(t)}</u>`);
   if (body) setInterval(() => {
     if (body.closest('.label').style.opacity === '0') return; // personne ne regarde : on ne tape pas
     if (wait > 0) { wait--; return; }
-    const cur = SCRIPT[line];
-    const isOut = !cur.startsWith('>>>');
-    col = isOut ? cur.length : col + 1; // les résultats s'affichent d'un coup, le code se tape
-    const done = SCRIPT.slice(0, line).map(esc).join('\n');
-    body.innerHTML = (done ? done + '\n' : '') + esc(cur.slice(0, col)) + (col < cur.length ? '<b>▍</b>' : '');
+    const lines = KATAS[kata];
+    title.textContent = lines[0];
+    const cur = lines[line];
+    const typed = cur.startsWith('>>>');
+    col = typed ? col + 2 : cur.length; // le code se tape, commentaires et résultats s'affichent d'un coup
+    const done = lines.slice(1, line).map(paint).join('\n');
+    const now = typed ? esc(cur.slice(0, col)) + (col < cur.length ? '<b>▍</b>' : '') : paint(cur);
+    body.innerHTML = (done ? done + '\n' : '') + now;
     if (col >= cur.length) {
-      line++; col = 0; wait = isOut ? 8 : 4;
-      if (line >= SCRIPT.length) { line = 0; wait = 30; }
+      line++; col = 0; wait = typed ? 5 : 3;
+      if (line >= lines.length) { kata = (kata + 1) % KATAS.length; line = 1; wait = 45; }
     }
-  }, 55);
+  }, 45);
 }
 const proj = new THREE.Vector3();
 const toScreen = (v) => {
