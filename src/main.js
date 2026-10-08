@@ -419,7 +419,7 @@ const POI_GROUPS = [
   { title: 'Formation', ids: ['polytech', 'ronarch', 'guelph'] },
   { title: 'Lieux', ids: ['regate', 'phare', 'port'] },
 ];
-const POI_NAMES = { regate: 'Régate en flotte', phare: 'Le Phare des maîtrises', agents: 'Open space des agents', run: 'Course à pied', gym: 'Muscu', formation: 'Formation', monde: 'International', perf: 'Zone perf', port: 'Ponton d’arrivée' };
+const POI_NAMES = { regate: 'Régate en flotte', phare: 'Le Phare des maîtrises', agents: 'Open space des agents', run: 'Course à pied', gym: 'Musculation', formation: 'Formation', monde: 'International', perf: 'Zone perf', port: 'Ponton d’arrivée' };
 // Décalage des noms sur la grande carte (le port est compact, les noms se chevaucheraient).
 const MAP_LABEL_OFFSET = { agents: [0, -14, 'right'], run: [0, -14, 'left'], gym: [10, 5, 'left'], port: [0, 30, 'center'], perf: [10, 5, 'left'] };
 const poiName = (z) => POI_NAMES[z.id] || z.card.title;
@@ -708,7 +708,7 @@ $('#cv-body').innerHTML = `
   <p class="eyebrow">Curriculum vitae</p>
   <h1>${esc(PROFILE.name)}</h1>
   <p class="lead">${esc(PROFILE.title)} · ${esc(PROFILE.tagline)}</p>
-  <div class="links">${PROFILE.links.map((l) => `<a class="btn ghost" href="${esc(l.href)}">${esc(l.label)}</a>`).join('')}</div>
+  <div class="links">${PROFILE.links.map((l) => `<a class="btn ghost" href="${esc(l.href)}"${l.href.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label)}</a>`).join('')}</div>
   <h3>Expérience</h3>
   ${[...EXPERIENCES].reverse().map((e) => `
     <div class="item"><div class="when">${esc(e.dates)}</div>

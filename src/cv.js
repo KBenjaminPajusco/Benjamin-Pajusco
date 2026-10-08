@@ -4,11 +4,9 @@ export const PROFILE = {
   name: 'Benjamin Pajusco',
   title: 'Ingénieur Performance & IA',
   tagline: 'Voile · data · simulation · agents IA',
-  // TODO: remplacer par les vrais liens avant publication
   links: [
-    { label: 'LinkedIn', href: '#' },
-    { label: 'GitHub', href: '#' },
-    { label: 'Email', href: '#' },
+    { label: 'LinkedIn', href: 'https://www.linkedin.com/in/benjamin-pajusco-075b9b1b9/' },
+    { label: 'Email', href: 'mailto:benjamin.pajusco@gmail.com' },
   ],
 };
 
@@ -145,14 +143,14 @@ export const INTERESTS = {
   run: {
     kicker: 'Centre d’intérêt',
     title: 'Course à pied',
-    body: 'Le footing, c’est le meilleur moment pour réfléchir à un problème.',
+    body: 'Trail de la digue (54 km), marathon et semi-marathon.',
     tags: ['Running'],
   },
   gym: {
     kicker: 'Centre d’intérêt',
     title: 'Musculation',
-    body: 'L’hygiène du sportif de haut niveau, gardée après la compétition.',
-    tags: ['Muscu'],
+    body: 'Pratique de la musculation en salle et en extérieur, ainsi que la gymnastique.',
+    tags: ['Musculation'],
   },
 };
 
