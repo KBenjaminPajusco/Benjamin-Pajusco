@@ -220,7 +220,7 @@ function updateLabels(focus) {
   const overworld = ow > 0.5;
   for (const l of labels) {
     // Carte du monde : seuls les grands noms de régions ; sinon, tous les détails sauf ces noms.
-    if (!!l.overworld !== overworld) { l.el.style.opacity = 0; continue; }
+    if (!!l.overworld !== overworld) { if (l.op !== 0) { l.op = 0; l.el.style.opacity = 0; } continue; }
     // zone : visible seulement dans cette zone ; hideInZone : masquée quand la grande fiche la remplace.
     const gated = l.zone && (l.hideInZone ? zoneId === l.zone : zoneId !== l.zone);
     proj.copy(l.pos).project(camera);
@@ -228,15 +228,36 @@ function updateLabels(focus) {
     // Plus on dézoome, plus on garde d'étiquettes visibles.
     const reach = overworld ? 1e5 : 260 * Math.max(1, userZoom);
     const visible = !gated && proj.z < 1 && Math.abs(proj.x) < 1.15 && Math.abs(proj.y) < 1.15 && dist < reach;
-    l.el.style.opacity = visible ? Math.min(1, (reach - dist) / 60) : 0;
-    l.el.classList.toggle('active', !!l.src.active);
-    if (visible) l.el.style.transform = `translate(${((proj.x + 1) / 2) * innerWidth}px, ${((1 - proj.y) / 2) * innerHeight}px) translate(-50%, -100%)`;
+    // Écritures DOM seulement quand la valeur change (gros gain sur téléphone).
+    const op = visible ? Math.round(Math.min(1, (reach - dist) / 60) * 20) / 20 : 0;
+    if (op !== l.op) { l.op = op; l.el.style.opacity = op; }
+    const act = !!l.src.active;
+    if (act !== l.act) { l.act = act; l.el.classList.toggle('active', act); }
+    if (visible) {
+      const x = Math.round(((proj.x + 1) / 2) * innerWidth), y = Math.round(((1 - proj.y) / 2) * innerHeight);
+      if (x !== l.x || y !== l.y) { l.x = x; l.y = y; l.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; }
+    }
   }
 }
 
 // --- Fiche de la zone active, accrochée au-dessus de ce qu'elle décrit.
 const card = $('#card');
 let activeZone = null;
+// Téléphone : la fiche fermée à la croix le reste tant qu'on ne quitte pas la zone (petit onglet pour la rouvrir).
+let dismissed = null;
+const cardTab = $('#card-tab');
+function closeCard() {
+  if (!activeZone) return;
+  dismissed = activeZone;
+  card.hidden = true;
+  stamp.hidden = true;
+}
+card.querySelector('.card-close').addEventListener('click', closeCard);
+cardTab.addEventListener('click', () => {
+  dismissed = null;
+  activeZone = null; // la prochaine mise à jour rouvre la fiche (et la carte) de la zone
+  cardTab.hidden = true;
+});
 let cardSize = { w: 0, h: 0 };
 function renderCard(z) {
   const c = z.card;
@@ -303,8 +324,11 @@ function updateZones() {
     const s = Math.hypot(me.x - area.x, me.y - area.z) / area.r;
     if (s < bestScore) { bestScore = s; best = z; }
   }
+  if (best !== dismissed) dismissed = null; // zone quittée : la prochaine fiche s'ouvre de nouveau
+  cardTab.hidden = !(dismissed && docked());
   if (best !== activeZone) {
     activeZone = best;
+    if (best && best === dismissed) { card.hidden = true; stamp.hidden = true; return; }
     if (best) renderCard(best); else card.hidden = true;
     // La carte reste affichée tant qu'on est dans la zone du lieu.
     if (best?.id === 'shn') showRegattas();
@@ -429,8 +453,8 @@ miniScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicM
 let miniAge = 1e9;
 function renderMinimap(dt) {
   miniAge += dt;
-  if (miniAge > 0.4) {
-    // Le monde vu d'en haut, recalculé ~2,5 fois par seconde seulement.
+  if (miniAge > (IS_MOBILE ? 1 : 0.4)) {
+    // Le monde vu d'en haut, recalculé ~2,5 fois par seconde (1 fois sur téléphone).
     miniAge = 0;
     renderer.shadowMap.autoUpdate = false;
     renderer.setRenderTarget(miniTarget);
@@ -730,10 +754,28 @@ camera.lookAt(focus);
 const emitters = [];
 const clock = new THREE.Clock();
 const portrait = () => innerHeight > innerWidth;
+const camRight = new THREE.Vector3();
 
 let simTime = 0;
+// Résolution adaptative (téléphone) : si les images arrivent trop lentement, on rend moins de pixels ;
+// si ça redevient fluide, on remonte doucement. Le décor reste net, seule la finesse varie.
+const PR_MAX = Math.min(devicePixelRatio, IS_MOBILE ? 1.25 : 2), PR_MIN = IS_MOBILE ? 0.7 : 1;
+let frameEma = 1 / 60, prTimer = 0;
+function adaptResolution(raw) {
+  if (document.hidden || raw > 0.25) return; // onglet en pause ou à-coup isolé : on ignore
+  frameEma += (raw - frameEma) * 0.05;
+  prTimer += raw;
+  if (prTimer < 1.5) return;
+  const pr = renderer.getPixelRatio();
+  let next = pr;
+  if (frameEma > 1 / 40 && pr > PR_MIN) next = Math.max(PR_MIN, pr - 0.15);
+  else if (frameEma < 1 / 56 && pr < PR_MAX) next = Math.min(PR_MAX, pr + 0.1);
+  if (next !== pr) { renderer.setPixelRatio(next); resize(); prTimer = -1.5; } else prTimer = 0;
+}
 function frame() {
-  tick(Math.min(clock.getDelta(), 1 / 20));
+  const raw = clock.getDelta();
+  adaptResolution(raw);
+  tick(Math.min(raw, 1 / 20));
   window.__pf && window.__pf.frames++;
   requestAnimationFrame(frame);
 }
@@ -751,7 +793,7 @@ function tick(dt) {
     // Fiche ouverte et commandes lâchées : le bateau se fige en gardant sa vitesse (il repart d'un coup
     // dès qu'on reprend la barre) et le décor passe en noir et blanc pour mettre l'information en avant.
     // Seulement une fois que le visiteur a pris la barre : jamais de noir et blanc « tout seul ».
-    frozen = started && touched && !!activeZone && !input.any && !race.playerIn;
+    frozen = started && touched && !!activeZone && !card.hidden && !input.any && !race.playerIn;
     if (!frozen) boat.update(dt, input, world.collide);
   }
   if (mode === 'walk') frozen = false;
@@ -800,7 +842,6 @@ function tick(dt) {
   let fz = started ? boat.pos.y + ahead.y : INTRO_VIEW.z;
   if (mode === 'walk') { fx = walker.pos.x; fz = walker.pos.y; }
   // Téléphone : quand le tiroir de fiche est ouvert en bas, on remonte la scène pour garder le bateau visible.
-  if (docked() && !card.hidden) fz += 22 * userZoom * (portrait() ? 1.5 : 1);
   // Une zone peut attirer le regard vers ce qu'elle montre (le café, la piste…).
   if (started && activeZone?.look) {
     const w = mode === 'walk' ? 0.3 : 0.5;
@@ -810,6 +851,14 @@ function tick(dt) {
   // Mode carte du monde : on glisse vers la vue d'ensemble, centrée entre le bateau et le centre de la carte.
   fx = THREE.MathUtils.lerp(fx, OVERWORLD.x * 0.7 + boat.pos.x * 0.3, ow);
   fz = THREE.MathUtils.lerp(fz, OVERWORLD.z * 0.7 + boat.pos.y * 0.3, ow);
+  // Téléphone : la fiche occupe la gauche de l'écran, on recadre pour que le bateau reste au centre de la partie libre.
+  if (docked() && !card.hidden && started) {
+    const viewW = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(focus) * camera.aspect;
+    const shift = (card.offsetWidth / innerWidth) * 0.5 * viewW;
+    camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    fx -= camRight.x * shift;
+    fz -= camRight.z * shift;
+  }
   focus.x = THREE.MathUtils.damp(focus.x, fx, 2.5, dt);
   focus.z = THREE.MathUtils.damp(focus.z, fz, 2.5, dt);
   const zoom = THREE.MathUtils.lerp(
@@ -831,8 +880,7 @@ function tick(dt) {
   updateLabels(focus);
   placeCard();
   // Hauteur du tiroir (mobile) : le bouton d'action et les messages se placent au-dessus.
-  document.documentElement.style.setProperty('--sheet-h', docked() && !card.hidden ? `${card.offsetHeight + 6}px` : '0px');
-  drawMap(mm);
+    drawMap(mm);
   if (!mapOverlay.hidden) {
     mapRenderer.render(scene, mapCam);
     drawMap(big, { names: true, highlight: mapHover });
@@ -845,7 +893,7 @@ window.__pf = {
   get boat() { return boat; },
   race,
   walker,
-  camera, world,
+  camera, world, renderer, scene,
   frames: 0,
   // Avance la simulation sans requestAnimationFrame (onglet en arrière-plan, captures).
   step(seconds, dt = 1 / 30) { for (let i = 0; i < seconds / dt; i++) tick(dt); },

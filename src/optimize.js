@@ -89,6 +89,7 @@ export class StaticMerger {
         mesh.castShadow = its.some((o) => o.castShadow);
         mesh.receiveShadow = its.some((o) => o.receiveShadow);
         mesh.matrixAutoUpdate = false;
+        mesh.userData.mergeRoot = true;
         this.scene.add(mesh);
         created++;
         for (const o of its) {
@@ -99,8 +100,27 @@ export class StaticMerger {
         }
       }
     }
-    // Les maillages masqués ne coûtent plus rien au rendu ; on les sort aussi du calcul des matrices.
+    // Les sous-arbres entièrement fusionnés (maillages cuits + simples groupes) sont retirés de la scène :
+    // plus de calcul de matrices ni de parcours au rendu pour ces milliers d'objets devenus inutiles.
+    const pure = new Map();
+    const isPure = (o) => {
+      if (pure.has(o)) return pure.get(o);
+      const selfOk = o.isMesh ? !!o.userData.merged : (o.type === 'Group' || o.type === 'Object3D') && !this.excluded(o);
+      const ok = selfOk && o.children.every(isPure);
+      pure.set(o, ok);
+      return ok;
+    };
+    const detach = [];
+    const walk = (o) => {
+      for (const c of o.children) {
+        if (c.userData.mergeRoot) continue;
+        if (isPure(c)) detach.push(c);
+        else walk(c);
+      }
+    };
+    walk(this.scene);
+    for (const o of detach) o.removeFromParent();
     this.scene.traverse((o) => { if (o.userData.merged) o.matrixAutoUpdate = false; });
-    this.stats = { removed, created };
+    this.stats = { removed, created, detached: detach.length };
   }
 }

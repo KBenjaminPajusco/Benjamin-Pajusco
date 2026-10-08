@@ -453,7 +453,13 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   #minimap { top: 52px; bottom: auto; left: 8px; width: 74px; height: 74px; border-radius: 10px; }
 
   /* Fiches : un tiroir en bas de l'écran, compact et défilant. */
-  .card.docked { left: 6px; right: 6px; bottom: 6px; top: auto; width: auto; max-height: 40vh; overflow: auto; padding: 10px 12px 12px; border-radius: 14px; border-top-width: 5px; transform: none !important; }
+  /* Fiches : un volet qui glisse depuis la gauche, sur les 2/3 de l'écran ; la carte se range dans le tiers restant. */
+  :root { --card-w: 66.667vw; }
+  .card.docked { left: 0; top: 0; bottom: 0; width: var(--card-w); max-height: none; overflow: auto; overscroll-behavior: contain;
+    padding: 14px 12px 16px; border-radius: 0 16px 16px 0; border-left: 0; border-top-width: 5px; transform: none; z-index: 4; }
+  .card.docked.pop { animation: slide-in .32s cubic-bezier(.2, .9, .3, 1); }
+  .card.docked .card-close { display: block; }
+  .card.docked .card-head { padding-right: 26px; }
   .card .logo { width: 40px; height: 40px; font-size: 13px; border-width: 2px; }
   .card-head { gap: 10px; }
   .card .kicker { font-size: 10.5px; }
@@ -531,16 +537,23 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 
 @media (max-width: 640px), (pointer: coarse) and (max-width: 950px) {
   /* La carte géographique se pose juste au-dessus du tiroir de fiche, à gauche : plus de chevauchement. */
-  #stamp { top: auto; right: auto; left: 8px; bottom: calc(var(--sheet-h, 0px) + 10px); width: 150px; }
-  #stamp.regattas { width: 180px; }
-  #stamp.simple { width: auto; }
-  .telemetry { max-height: 26vh; }
+  /* Carte géographique et télémétrie : dans le tiers droit, à côté du volet de fiche. */
+  #stamp, #stamp.regattas { top: 56px; bottom: auto; left: calc(var(--card-w) + 6px); right: 6px; width: auto; z-index: 4; }
+  #stamp.simple { left: calc(var(--card-w) + 6px); width: auto; }
+  .telemetry { left: calc(var(--card-w) + 6px); right: 6px; width: auto; max-height: 50vh; z-index: 4; }
   .action { right: 10px; left: auto; transform: none; }
   .action:hover, .action:active { transform: none; }
 }
 @media (pointer: coarse) and (max-height: 500px) {
   /* Téléphone en paysage : tiroir plus bas, panneaux plus courts. */
-  .card.docked { max-height: 46vh; left: auto; width: min(420px, 60vw); }
+  :root { --card-w: min(440px, 55vw); }
   .telemetry { max-height: 40vh; }
   #intro .panel { max-height: calc(100vh - 16px); overflow: auto; }
 }
+
+/* Croix de fermeture du volet (téléphone) et onglet pour le rouvrir. */
+.card-close { display: none; position: absolute; top: 6px; right: 8px; width: 34px; height: 34px; border: 0; background: none;
+  font: inherit; font-size: 28px; line-height: 1; color: var(--ink); cursor: pointer; }
+.card-tab { position: fixed; left: 0; top: 40%; z-index: 4; border: 2.5px solid var(--ink); border-left: 0; border-radius: 0 12px 12px 0;
+  background: var(--paper); font-size: 20px; padding: 10px 8px; color: var(--ink); cursor: pointer; animation: slide-in .3s ease-out; }
+@keyframes slide-in { from { transform: translateX(-100%); } to { transform: none; } }
