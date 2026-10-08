@@ -560,6 +560,7 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 
 /* Tractions : bouton et compteur partagé dans la fiche Musculation. */
 .card .pullup { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.card .pullup[hidden] { display: none; }
 .card .pullup .btn { margin-top: 0; background: #2f9e55; color: #fff; }
 .card .pullup-count { margin: 0; font-size: 13px; color: var(--ink-soft); }
 .card .pullup-count b { color: var(--ink); font-size: 16px; }
