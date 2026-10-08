@@ -1007,6 +1007,7 @@ function tick(dt) {
   const framing = mode === 'walk' ? activeZone?.frame : null;
   const walkTarget = framing
     ? THREE.MathUtils.clamp(Math.max(framing.r, Math.hypot(walker.pos.x - framing.x, walker.pos.y - framing.z) + 8) / 36.5, 0.82, 2.2) / 0.8
+      * (IS_MOBILE && !portrait() ? 0.8 : 1) // téléphone en paysage : peu de hauteur, on serre le cadre
     : activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? (IS_MOBILE ? 1.4 : 3.4) : 1.2; // téléphone : on garde le marin lisible
   walkZoomS = THREE.MathUtils.damp(walkZoomS, walkTarget, 1.8, dt);
 
