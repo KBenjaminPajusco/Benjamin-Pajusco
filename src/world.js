@@ -428,33 +428,47 @@ export function buildWorld(scene) {
         noTree(cx, cz, w / 2 + 1, d / 2);
       };
 
-      // Sol : pelouse générale, parvis et cheminements.
-      flat(70, 46, -8, -2, '#8fc46d', 0.04);
-      flat(14, 8, -12, 8, pave);                 // parvis entre IHT et IRESTE
+      // Pelouse aux bords arrondis : courbe lissée passant par quelques points (coordonnées du campus).
+      const lawn = (pts) => {
+        const curve = new THREE.CatmullRomCurve3(pts.map(([lx, lz]) => new THREE.Vector3(lx, 0, lz)), true, 'centripetal');
+        const shape = new THREE.Shape(curve.getSpacedPoints(64).map((v) => new THREE.Vector2(v.x, -v.z)));
+        c.add(new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, 0.04, 0), toon('#8fc46d')));
+      };
+      // Côté sud : entre la route nord et la route en anneau, sans déborder sur l'une ni l'autre.
+      lawn([[-30, -12], [-12, -13], [16, -13], [27, -9], [26, 6], [14, 15], [2, 25], [-18, 26], [-29, 17], [-32, 2]]);
+      // Sol : parvis et cheminements.
+      flat(14, 8, -12, 8, pave);                 // parvis devant IRESTE
       flat(3, 12, -18, -10, pave);               // vers la route et la rotonde
-      flat(22, 3, 0, 8, pave);                   // allée le long des sheds
+      flat(26, 3, 4, 7, pave);                   // allée le long d'IRESTE
       noTree(-12, 4, 9, 8);
 
-      // IRESTE : longue halle à toit à deux pans, aile basse en sheds devant, entrée vitrée.
-      c.add(solid(new THREE.BoxGeometry(34, 7, 9).translate(2, 3.5, -7), white, { outlineWidth: 0.16 }));
-      c.add(solid(new THREE.BoxGeometry(34.3, 1.3, 9.3).translate(2, 4.8, -7), glass, { outlineWidth: 0.05 }));
-      const ridge = new THREE.CylinderGeometry(0.01, 6.4, 2.6, 4, 1).rotateY(Math.PI / 4).scale(0.74, 1, 3.8).rotateY(Math.PI / 2).translate(2, 8.3, -7);
-      c.add(solid(ridge, roofGrey, { outlineWidth: 0.1 }));
-      c.add(solid(new THREE.BoxGeometry(32, 4, 7).translate(2, 2, 1.5), '#eef1f4', { outlineWidth: 0.14 }));
-      for (let k = 0; k < 8; k++) {
-        // Sheds : un pan incliné et un pan vitré vertical, comme les toits en dents de scie de la photo.
-        const sx = -12 + k * 4;
-        const shed = new THREE.BufferGeometry();
-        const v = [sx, 4, -2, sx + 4, 4, -2, sx + 4, 4, 5, sx, 4, 5, sx + 4, 6.2, -2, sx + 4, 6.2, 5];
-        shed.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
-        shed.setIndex([0, 3, 5, 0, 5, 4, 1, 4, 5, 1, 5, 2, 0, 4, 1, 3, 2, 5]);
-        shed.computeVertexNormals();
-        c.add(solid(shed, roofGrey, { outlineWidth: 0.05 }));
-        c.add(solid(new THREE.BoxGeometry(0.15, 2.1, 7).translate(sx + 4, 5.1, 1.5), glass, { outlineWidth: 0 }));
+      // IRESTE : un long bâtiment, toit plat et une grande verrière à deux pans sur toute sa longueur.
+      const IL = 38, IX = 6, IZ = -5;
+      c.add(solid(new THREE.BoxGeometry(IL, 7, 12).translate(IX, 3.5, IZ), white, { outlineWidth: 0.16 }));
+      for (const y of [2.3, 5.2]) c.add(solid(new THREE.BoxGeometry(IL + 0.3, 1.2, 12.3).translate(IX, y, IZ), glass, { outlineWidth: 0.05 }));
+      c.add(solid(new THREE.BoxGeometry(IL + 0.4, 0.5, 12.4).translate(IX, 7.25, IZ), grey, { outlineWidth: 0.08 }));
+      // La verrière : un prisme vitré posé dans l'axe, avec ses montants réguliers.
+      const VL = IL - 2, VW = 5, VH = 3.6; // longueur, demi-largeur, hauteur du faîtage
+      const tri = new THREE.Shape([new THREE.Vector2(-VW, 0), new THREE.Vector2(VW, 0), new THREE.Vector2(0, VH)]);
+      const verriere = new THREE.ExtrudeGeometry(tri, { depth: VL, bevelEnabled: false }).rotateY(Math.PI / 2).translate(IX - VL / 2, 7.5, IZ);
+      c.add(solid(verriere, '#8fd0f2', { outlineWidth: 0.08 }));
+      // Fermes : deux arbalétriers par travée, et le faîtage.
+      const slope = Math.atan2(VH, VW), rafter = Math.hypot(VW, VH);
+      for (let k = 0; k <= 12; k++) {
+        const fx = IX - VL / 2 + k * (VL / 12);
+        for (const sd of [-1, 1]) {
+          const r = solid(new THREE.BoxGeometry(0.18, 0.18, rafter), grey, { outlineWidth: 0 });
+          r.position.set(fx, 7.5 + VH / 2 + 0.05, IZ + (sd * VW) / 2);
+          r.rotation.x = sd * slope;
+          c.add(r);
+        }
       }
-      c.add(solid(new THREE.BoxGeometry(5, 4.4, 3).translate(-13, 2.2, -1.5), glass, { outlineWidth: 0.08 }));
-      plate('IRESTE', 6, 8, 6, -2.42);
-      c.add(sign(poly, 15).translateX(2).translateZ(-7));
+      c.add(solid(new THREE.BoxGeometry(VL, 0.22, 0.22).translate(IX, 7.5 + VH + 0.05, IZ), grey, { outlineWidth: 0 }));
+      // Entrée vitrée au milieu de la façade sud.
+      c.add(solid(new THREE.BoxGeometry(6, 4.6, 2.2).translate(IX, 2.3, IZ + 7), glass, { outlineWidth: 0.08 }));
+      c.add(solid(new THREE.BoxGeometry(7, 0.4, 3).translate(IX, 4.8, IZ + 7.2), blue, { outlineWidth: 0.06 }));
+      plate('IRESTE', 6, IX + 11, 6.2, IZ + 6.08);
+      c.add(sign(poly, 16).translateX(IX).translateZ(IZ));
 
       // ISITEM : la rotonde ovale derrière IRESTE (de l'autre côté de la route), anneau sombre et toit blanc à facettes.
       const rx = -10, rz = -34;
@@ -467,19 +481,20 @@ export function buildWorld(scene) {
       c.add(solid(new THREE.BoxGeometry(8, 9, 8).translate(rx + 18, 4.5, rz - 1), white, { outlineWidth: 0.14 }));
       c.add(solid(new THREE.BoxGeometry(8.2, 0.5, 8.2).translate(rx + 18, 9.2, rz - 1), grey, { outlineWidth: 0.06 }));
       flat(4, 9, rx + 3, rz + 13, pave);  // de la rotonde vers la route
-      flat(48, 26, rx + 8, rz - 3, '#8fc46d', 0.04); // pelouse côté rotonde
+      lawn([[-40, -25], [-8, -25.5], [24, -25], [28, -38], [25, -54], [4, -53], [-20, -48], [-40, -41]]); // côté rotonde et IHT
 
-      // IHT : à l'avant, toit en voûtes blanches.
-      c.add(solid(new THREE.BoxGeometry(13, 4.5, 10).translate(-27, 2.25, 9), '#eef1f4', { outlineWidth: 0.14 }));
-      c.add(solid(new THREE.BoxGeometry(13.2, 1.1, 10.2).translate(-27, 2.6, 9), glass, { outlineWidth: 0.05 }));
+      // IHT : à gauche, à mi-chemin entre IRESTE et la rotonde, toit en voûtes blanches.
+      const HX = -31, HZ = -31;
+      flat(3, 5, HX + 2, HZ + 7, pave); // vers le bout de la route
+      c.add(solid(new THREE.BoxGeometry(13, 4.5, 10).translate(HX, 2.25, HZ), '#eef1f4', { outlineWidth: 0.14 }));
+      c.add(solid(new THREE.BoxGeometry(13.2, 1.1, 10.2).translate(HX, 2.6, HZ), glass, { outlineWidth: 0.05 }));
       for (let k = 0; k < 3; k++) {
-        const vault = new THREE.CylinderGeometry(2.17, 2.17, 10, 10, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).translate(-31.3 + k * 4.33, 4.5, 9);
+        const vault = new THREE.CylinderGeometry(2.17, 2.17, 10, 10, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).translate(HX - 4.33 + k * 4.33, 4.5, HZ);
         c.add(solid(vault, '#fbfcfd', { outlineWidth: 0.07 }));
       }
-      plate('IHT', 3.4, -27, 3.6, 14.06);
+      plate('IHT', 3.4, HX, 3.6, HZ + 5.06);
 
       // Parkings entre les bâtiments, comme sur la photo.
-      parking(12, 15, 6, 1);
       parking(-6, 17, 5, 1);
       parking(rx + 22, rz - 11, 5, 1);
       // Totem, bancs et arceaux à vélos sur le parvis.
@@ -492,15 +507,15 @@ export function buildWorld(scene) {
 
       // Collisions, étiquette et zone : la fiche s'ouvre au cœur du campus.
       blocks.boxes.push(
-        { x: wx + 2, z: wz - 7, hx: 17.2, hz: 4.7 }, { x: wx + 2, z: wz + 1.5, hx: 16.2, hz: 3.7 },
-        { x: wx - 27, z: wz + 9, hx: 6.7, hz: 5.2 }, { x: wx + rx + 18, z: wz + rz - 1, hx: 4.2, hz: 4.2 },
+        { x: wx + IX, z: wz + IZ, hx: IL / 2 + 0.3, hz: 6.3 }, { x: wx + IX, z: wz + IZ + 7, hx: 3.2, hz: 1.3 },
+        { x: wx + HX, z: wz + HZ, hx: 6.7, hz: 5.2 }, { x: wx + rx + 18, z: wz + rz - 1, hx: 4.2, hz: 4.2 },
       );
       blocks.circles.push({ x: wx + rx - 3.5, z: wz + rz, r: 7.5 }, { x: wx + rx + 3.5, z: wz + rz, r: 7.5 });
       noTree(rx, rz, 13, 10);
-      labels.push({ pos: new THREE.Vector3(wx + 2, top + 19.5, wz - 7), html: poly.school, cls: 'label-place', zone: poly.id, hideInZone: true });
+      labels.push({ pos: new THREE.Vector3(wx + IX, top + 20.5, wz + IZ), html: poly.school, cls: 'label-place', zone: poly.id, hideInZone: true });
       zones.push({
         id: poly.id, x: wx - 8, z: wz - 4, r: 0, land: { x: wx - 8, z: wz - 4, r: 34 },
-        anchor: new THREE.Vector3(wx + 2, top + 18, wz - 7), geo: { ...poly.geo, place: poly.place, flag: poly.flag },
+        anchor: new THREE.Vector3(wx + IX, top + 19, wz + IZ), geo: { ...poly.geo, place: poly.place, flag: poly.flag },
         card: { brand: poly.brand, logo: poly.logo, kicker: poly.dates, title: poly.school, sub: poly.degree, tags: poly.tags, body: poly.body, meta: poly.place, accent: poly.brand.color },
       });
     }
