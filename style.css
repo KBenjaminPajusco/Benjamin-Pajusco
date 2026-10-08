@@ -640,3 +640,15 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .photo-frame figcaption { margin: 9px 4px 2px; font-size: 13.5px; font-weight: 600; }
 .photo-frame figcaption small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
 .photo-frame .close { position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper); font: inherit; font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink); }
+
+/* Téléphone en portrait : la fiche devient un tiroir en bas de l'écran, la scène garde toute la largeur. */
+@media (max-width: 640px) and (orientation: portrait), (pointer: coarse) and (max-width: 950px) and (orientation: portrait) {
+  .card.docked { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 42vh; border-radius: 16px 16px 0 0; border-left: 2.5px solid var(--ink); border-bottom: 0; }
+  .card.docked.pop { animation: slide-up .32s cubic-bezier(.2, .9, .3, 1); }
+  #stamp, #stamp.regattas, #stamp.simple { top: 56px; left: auto; right: 8px; width: min(40vw, 150px); }
+  .telemetry { top: 56px; left: 8px; right: 8px; width: auto; max-height: 26vh; }
+  .card-tab { top: auto; bottom: 14px; }
+  .action { bottom: calc(var(--sheet-h, 0px) + 10px); }
+  .toast { bottom: calc(var(--sheet-h, 0px) + 58px); }
+}
+@keyframes slide-up { from { transform: translateY(100%); } to { transform: none; } }

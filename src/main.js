@@ -950,6 +950,7 @@ const emitters = [], aiEmitters = [];
 const clock = new THREE.Clock();
 const portrait = () => innerHeight > innerWidth;
 const camRight = new THREE.Vector3();
+let lastSheetH = '';
 
 let simTime = 0;
 // Résolution adaptative (téléphone) : si les images arrivent trop lentement, on rend moins de pixels ;
@@ -1069,13 +1070,21 @@ function tick(dt) {
   fz = THREE.MathUtils.lerp(fz, OVERWORLD.z * 0.7 + boat.pos.y * 0.3, ow);
   // Téléphone : la fiche occupe la gauche de l'écran, on recadre pour que le bateau reste au centre de la partie libre.
   // Idem sur ordinateur quand un lieu est cadré à pied : la fiche est rangée à gauche, le lieu se centre à droite.
-  if ((docked() || framing) && !card.hidden && started) {
+  // Téléphone en portrait : la fiche est un tiroir en bas, on remonte le lieu dans la partie libre au-dessus.
+  const sheet = docked() && portrait() && !card.hidden && started;
+  if (sheet) {
+    const viewH = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(focus);
+    fz += ((card.offsetHeight / innerHeight) * 0.5 * viewH) / Math.sin(Math.atan2(CAM_OFFSET.y, CAM_OFFSET.z)); // vers le bas de l'écran = vers le sud
+  } else if ((docked() || framing) && !card.hidden && started) {
     const viewW = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(focus) * camera.aspect;
     const shift = ((card.offsetWidth + (docked() ? 0 : 16)) / innerWidth) * 0.5 * viewW;
     camRight.setFromMatrixColumn(camera.matrixWorld, 0);
     fx -= camRight.x * shift;
     fz -= camRight.z * shift;
   }
+  // Hauteur du tiroir : le bouton d'action et les messages se placent juste au-dessus.
+  const sheetH = sheet ? `${card.offsetHeight}px` : '0px';
+  if (sheetH !== lastSheetH) { lastSheetH = sheetH; document.documentElement.style.setProperty('--sheet-h', sheetH); }
   focus.x = THREE.MathUtils.damp(focus.x, fx, 2.5, dt);
   focus.z = THREE.MathUtils.damp(focus.z, fz, 2.5, dt);
   // À pied : facteur 0,8 = vue un peu plus large, le low poly se lit mieux de plus haut.
