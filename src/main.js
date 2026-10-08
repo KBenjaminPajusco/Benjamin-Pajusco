@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008120404';
-import { buildWorld, LAYOUT } from './world.js?v=20261008120404';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120404';
-import { Walker } from './walker.js?v=20261008120404';
-import { Rib } from './rib.js?v=20261008120404';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008120404';
-import { STEPS, TEAM } from './cafe.js?v=20261008120404';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120404';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120404';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120404';
-import { Race, COURSE } from './race.js?v=20261008120404';
-import { StaticMerger } from './optimize.js?v=20261008120404';
-import { solid } from './toon.js?v=20261008120404';
+import { Boat } from './boat.js?v=20261008120735';
+import { buildWorld, LAYOUT } from './world.js?v=20261008120735';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120735';
+import { Walker } from './walker.js?v=20261008120735';
+import { Rib } from './rib.js?v=20261008120735';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008120735';
+import { STEPS, TEAM } from './cafe.js?v=20261008120735';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120735';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120735';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120735';
+import { Race, COURSE } from './race.js?v=20261008120735';
+import { StaticMerger } from './optimize.js?v=20261008120735';
+import { solid } from './toon.js?v=20261008120735';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1038,14 +1038,14 @@ let cine = { phase: 'menu', t: 0 };
 let cineOverview = false;
 const smooth = (u) => u * u * (3 - 2 * u);
 function skipCine() { if (cine.phase === 'fly' && cine.t > 0.3) cine.t = Math.max(cine.t, CINE.fly + CINE.hold); }
-function cinePose(dt) {
+// play : la pose de la caméra de jeu (même cible, même zoom), pour que la plongée s'y fonde sans à-coup.
+function cinePose(dt, play) {
   if (cine.phase === 'done') return null;
   const menu = { x: boat.pos.x + 3, z: boat.pos.y + 3, zoom: 0.55 };
   if (cine.phase === 'menu') return menu;
   cine.t += dt;
   // L'île entière dans l'image, quelle que soit la forme de l'écran.
   const island = { x: ISLAND_VIEW.x, z: ISLAND_VIEW.z, zoom: Math.max(ISLAND_VIEW.d / 96, ISLAND_VIEW.w / (80 * camera.aspect)) };
-  const play = { x: boat.pos.x, z: boat.pos.y, zoom: portrait() ? 1.5 : 1 };
   const mix = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, zoom: Math.exp(Math.log(a.zoom) + (Math.log(b.zoom) - Math.log(a.zoom)) * u) });
   const { fly, hold, dive } = CINE, t = cine.t;
   cineOverview = t > fly * 0.6 && t < fly + hold + dive * 0.35;
@@ -1055,7 +1055,6 @@ function cinePose(dt) {
   cine.phase = 'done';
   cineOverview = false;
   started = true;
-  focus.set(play.x, 0, play.z);
   return null;
 }
 const OVERWORLD_TRAVEL = false; // true : gros bateau + vue globale entre les régions (essai JRPG)
@@ -1209,7 +1208,7 @@ function tick(dt) {
   const zoom = THREE.MathUtils.lerp(
     userZoom * (mode === 'walk' ? 0.8 * walkZoomS : zoneZoom) * (portrait() ? 1.5 : 1) * 1,
     OVERWORLD.zoom * (portrait() ? 1.5 : 1), ow);
-  const pose = cinePose(dt);
+  const pose = cinePose(dt, { x: fx, z: fz, zoom }); // cible de la caméra de jeu (avant lissage)
   if (pose) focus.set(pose.x, 0, pose.z);
   const camZoom = pose ? pose.zoom : zoom;
   camera.position.set(focus.x + CAM_OFFSET.x * camZoom, CAM_OFFSET.y * camZoom, focus.z + CAM_OFFSET.z * camZoom);
