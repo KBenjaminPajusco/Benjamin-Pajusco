@@ -1026,7 +1026,7 @@ function tick(dt) {
 
   // Télémétrie : toujours enregistrée, affichée et « envoyée » au phare quand on s'en approche.
   recorder.sample(dt, t, boat);
-  const near = activeZone?.telemetry && mode === 'boat';
+  const near = activeZone?.telemetry && mode === 'boat' && !card.hidden; // fiche fermée : la télémétrie se range aussi
   boat.root.localToWorld(mastTop.set(0, 14, 1));
   stream.update(dt, t, mastTop, world.phare.lamp, near ? 1 : 0);
   $('#telemetry').hidden = !near;
