@@ -1005,7 +1005,7 @@ function tick(dt) {
   // Entre deux lieux, elle suit le marin et recule pour montrer la ville.
   const framing = mode === 'walk' ? activeZone?.frame : null;
   const walkTarget = framing
-    ? THREE.MathUtils.clamp(Math.max(framing.r, Math.hypot(walker.pos.x - framing.x, walker.pos.y - framing.z) + 8) / 30, 1, 2.6) / 0.8
+    ? THREE.MathUtils.clamp(Math.max(framing.r, Math.hypot(walker.pos.x - framing.x, walker.pos.y - framing.z) + 8) / 36.5, 0.82, 2.2) / 0.8
     : activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? 3.4 : 1.2;
   walkZoomS = THREE.MathUtils.damp(walkZoomS, walkTarget, 1.8, dt);
 
