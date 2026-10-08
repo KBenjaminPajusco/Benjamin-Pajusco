@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008145322';
-import { makeWater } from './effects.js?v=20261008145322';
-import { person } from './characters.js?v=20261008145322';
-import { buildCafe } from './cafe.js?v=20261008145322';
-import { buildMatchRace } from './matchrace.js?v=20261008145322';
-import { buildPhare } from './phare.js?v=20261008145322';
-import { Boat } from './boat.js?v=20261008145322';
-import { buildDecor } from './decor.js?v=20261008145322';
-import { buildTown } from './town.js?v=20261008145322';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008145322';
-import { buildIslandLife } from './islandlife.js?v=20261008145322';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008145322';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151147';
+import { makeWater } from './effects.js?v=20261008151147';
+import { person } from './characters.js?v=20261008151147';
+import { buildCafe } from './cafe.js?v=20261008151147';
+import { buildMatchRace } from './matchrace.js?v=20261008151147';
+import { buildPhare } from './phare.js?v=20261008151147';
+import { Boat } from './boat.js?v=20261008151147';
+import { buildDecor } from './decor.js?v=20261008151147';
+import { buildTown } from './town.js?v=20261008151147';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008151147';
+import { buildIslandLife } from './islandlife.js?v=20261008151147';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008151147';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -915,6 +915,11 @@ export function buildWorld(scene) {
       // Escalade : l'aire de blocs du parc.
       const C = life.climb;
       labels.push({ pos: new THREE.Vector3(C.x, 16, C.z), html: '🧗 Escalade', cls: 'label-place', zone: 'climb', hideInZone: true });
+      // Code : le codeur du parc et sa fenêtre de code flottante (visible quand on s'approche).
+      const K = life.code;
+      labels.push({ pos: new THREE.Vector3(K.x, 13, K.z), html: '💻 Code', cls: 'label-place', zone: 'code', hideInZone: true });
+      labels.push({ pos: new THREE.Vector3(K.x + 2, 9.5, K.z - 3), html: '<div class="cw-bar"><i></i><i></i><i></i><span>kata.py</span></div><pre class="cw-body"></pre>', cls: 'label-code', zone: 'code' });
+      zones.push({ id: 'code', x: K.x, z: K.z, r: 0, land: { x: K.x, z: K.z, r: 15 }, frame: { x: K.x, z: K.z - 2, r: 16 }, anchor: new THREE.Vector3(K.x, 12, K.z), card: { ...INTERESTS.code, accent: '#3c4a5c' } });
       zones.push({ id: 'climb', x: C.x, z: C.z, r: 0, land: { x: C.x, z: C.z + 3, r: 16 }, frame: { x: C.x, z: C.z + 2, r: 16 }, anchor: new THREE.Vector3(C.x, 14, C.z), card: { ...INTERESTS.climb, accent: '#8d6e63' } });
     }
   }

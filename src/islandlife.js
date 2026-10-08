@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008145322';
-import { person } from './characters.js?v=20261008145322';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008145322';
+import { solid, rng, PALETTE } from './toon.js?v=20261008151147';
+import { person } from './characters.js?v=20261008151147';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008151147';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -187,10 +187,50 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     life.add(spotter);
   }
   const climbFree = (x, z) => Math.hypot(x - CLIMB.x, z - CLIMB.z - 2) > 14;
+
+  // --- Le codeur : assis à une table de pique-nique, portable ouvert, sweat à capuche et lunettes.
+  const CODE = { x: park.x - 30, z: park.z + 13 };
+  {
+    const wood = PALETTE.wood, metal = '#55607a';
+    const g = new THREE.Group();
+    g.position.set(CODE.x, Y, CODE.z);
+    g.add(solid(new THREE.BoxGeometry(6, 0.3, 3).translate(0, 2.3, 0), wood, { outlineWidth: 0.05 }));
+    for (const dx of [-2.5, 2.5]) g.add(solid(new THREE.BoxGeometry(0.25, 2.3, 2.6).translate(dx, 1.15, 0), metal, { outlineWidth: 0.03 }));
+    for (const dz of [-2.6, 2.6]) g.add(solid(new THREE.BoxGeometry(6, 0.25, 1.1).translate(0, 1.3, dz), wood, { outlineWidth: 0.04 }));
+    // Le portable, écran tourné vers le codeur (au nord), qui luit.
+    g.add(solid(new THREE.BoxGeometry(2, 0.1, 1.3).translate(0, 2.5, -0.2), '#cfd6e0', { outlineWidth: 0.03 }));
+    g.add(solid(new THREE.BoxGeometry(2, 1.3, 0.1).rotateX(0.25).translate(0, 3.15, 0.45), '#cfd6e0', { outlineWidth: 0.03 }));
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.1), new THREE.MeshBasicMaterial({ color: '#173b2c' }));
+    screen.position.set(0, 3.15, 0.38);
+    screen.rotation.set(0.25, Math.PI, 0);
+    g.add(screen);
+    // Canette de boisson énergisante.
+    g.add(solid(new THREE.CylinderGeometry(0.22, 0.22, 0.7, 8).translate(1.6, 2.8, 0.3), '#2f9e55', { outlineWidth: 0.02 }));
+    life.add(g);
+    blocks.circles.push({ x: CODE.x, z: CODE.z, r: 3.4 });
+    const nerd = person({ shirt: '#3c4a5c', pants: '#26324a', hair: '#2b1d16' });
+    nerd.scale.setScalar(S);
+    nerd.position.set(CODE.x, Y + 1.45 - 0.95 * S, CODE.z - 2.4);
+    nerd.userData.legs.forEach((l) => { l.rotation.x = -1.45; });
+    // Lunettes et capuche.
+    for (const sx of [-0.09, 0.09]) {
+      const lens = solid(new THREE.TorusGeometry(0.07, 0.018, 4, 10).translate(sx, 1.99, 0.27), '#1d2533', { outlineWidth: 0 });
+      nerd.add(lens);
+    }
+    nerd.add(solid(new THREE.SphereGeometry(0.3, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.55).rotateX(-0.6).translate(0, 1.95, -0.1), '#3c4a5c', { outlineWidth: 0.03 }));
+    life.add(nerd);
+    anim.push((dt, t) => {
+      // Il tape vite, avec de petites pauses pour réfléchir.
+      const busy = Math.sin(t * 0.7) > -0.4;
+      nerd.userData.arms.forEach((a, k) => { a.rotation.x = busy ? -1.15 + Math.sin(t * 16 + k * 2) * 0.12 : -1.0; });
+      nerd.rotation.y = busy ? 0 : Math.sin(t * 2) * 0.08;
+    });
+  }
+  const codeFree = (x, z) => Math.hypot(x - CODE.x, z - CODE.z) > 9;
   for (let k = 0; k < 26; k++) {
     const a = R() * Math.PI * 2, rr = 0.45 + R() * 0.45;
     const x = park.x + Math.cos(a) * park.rx * rr, z = park.z + Math.sin(a) * park.rz * rr;
-    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10 || !climbFree(x, z)) continue;
+    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10 || !climbFree(x, z) || !codeFree(x, z)) continue;
     if (blocks.boxes.some((b) => Math.abs(x - b.x) < b.hx + 2 && Math.abs(z - b.z) < b.hz + 2)) continue; // ex. la muscu
     const t = leafy(R, Y);
     t.position.set(x, 0, z);
@@ -454,5 +494,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
-  return { roads: roadLines, park, climb: CLIMB };
+  return { roads: roadLines, park, climb: CLIMB, code: CODE };
 }

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008145322';
-import { person } from './characters.js?v=20261008145322';
-import { keelboat } from './matchrace.js?v=20261008145322';
-import { lampPost } from './island.js?v=20261008145322';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008151147';
+import { person } from './characters.js?v=20261008151147';
+import { keelboat } from './matchrace.js?v=20261008151147';
+import { lampPost } from './island.js?v=20261008151147';
 
 // La ville du port : vieille ville à rue sinueuse avec voitures, promenade avec passants,
 // capitainerie, et une marina (pontons, places, bateaux amarrés) dans le bassin.

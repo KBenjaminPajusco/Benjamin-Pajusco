@@ -139,6 +139,11 @@ export const PLACES = [
   { name: 'Lorient', flag: 'FR' }, { name: 'Naples', flag: 'IT' }, { name: 'Guelph, Ontario', flag: 'CA' },
 ];
 
+export const LANGUAGES = [
+  { name: 'Français', level: 'Langue maternelle' },
+  { name: 'Anglais', level: 'Courant à l’oral · TOEIC' },
+];
+
 export const INTERESTS = {
   run: {
     kicker: 'Centre d’intérêt',
@@ -151,6 +156,12 @@ export const INTERESTS = {
     title: 'Musculation',
     body: 'Pratique de la musculation en salle et en extérieur, ainsi que la gymnastique.',
     tags: ['Musculation'],
+  },
+  code: {
+    kicker: 'Centre d’intérêt',
+    title: 'Code',
+    body: 'Algorithmes et katas pour le plaisir : 4 kyu sur Codewars. Participations à la Battle Dev Thales et à la Match Up Coding Battle.',
+    tags: ['Codewars 4 kyu', 'Battle Dev', 'Python'],
   },
   climb: {
     kicker: 'Centre d’intérêt',
