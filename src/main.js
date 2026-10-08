@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008120131';
-import { buildWorld, LAYOUT } from './world.js?v=20261008120131';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120131';
-import { Walker } from './walker.js?v=20261008120131';
-import { Rib } from './rib.js?v=20261008120131';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008120131';
-import { STEPS, TEAM } from './cafe.js?v=20261008120131';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120131';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120131';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120131';
-import { Race, COURSE } from './race.js?v=20261008120131';
-import { StaticMerger } from './optimize.js?v=20261008120131';
-import { solid } from './toon.js?v=20261008120131';
+import { Boat } from './boat.js?v=20261008120218';
+import { buildWorld, LAYOUT } from './world.js?v=20261008120218';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120218';
+import { Walker } from './walker.js?v=20261008120218';
+import { Rib } from './rib.js?v=20261008120218';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008120218';
+import { STEPS, TEAM } from './cafe.js?v=20261008120218';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120218';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120218';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120218';
+import { Race, COURSE } from './race.js?v=20261008120218';
+import { StaticMerger } from './optimize.js?v=20261008120218';
+import { solid } from './toon.js?v=20261008120218';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -227,7 +227,9 @@ function updateLabels(focus) {
   const overworld = ow > 0.5 || cineOverview; // noms des régions pendant le survol de l'intro
   for (const l of labels) {
     // Carte du monde : seuls les grands noms de régions ; sinon, tous les détails sauf ces noms.
-    if (!!l.overworld !== overworld) { if (l.op !== 0) { l.op = 0; l.el.style.opacity = 0; } continue; }
+    // Les titres de catégories (Formation, Emploi…) restent visibles aussi pendant le survol de l'intro.
+    const always = l.cls === 'label-cat';
+    if (!always && !!l.overworld !== overworld) { if (l.op !== 0) { l.op = 0; l.el.style.opacity = 0; } continue; }
     // zone : visible seulement dans cette zone ; hideInZone : masquée quand la grande fiche la remplace.
     const gated = l.zone && (l.hideInZone ? zoneId === l.zone : zoneId !== l.zone);
     proj.copy(l.pos).project(camera);
