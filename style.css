@@ -113,7 +113,7 @@ canvas#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: bl
 .poi em { margin-left: auto; font-style: normal; font-weight: 500; font-size: 12px; color: var(--ink-soft); }
 .map-panel .close, .cv .close { position: absolute; top: 8px; right: 12px; font: inherit; font-size: 28px; line-height: 1; border: 0; background: none; cursor: pointer; color: var(--ink); z-index: 1; }
 
-#fade { position: fixed; inset: 0; background: #fffdf8; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 5; }
+#fade { position: fixed; inset: 0; background: #fffdf8; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 7; }
 #fade.on { opacity: 1; }
 
 .hint {
@@ -182,7 +182,7 @@ kbd { font: inherit; font-weight: 700; border: 1.5px solid var(--ink); border-bo
 
 /* L'intro laisse voir la scène : panneau en bas, fond dégradé. */
 #intro { place-items: end center; background: linear-gradient(to top, rgba(29, 37, 51, .45), transparent 60%); backdrop-filter: none; padding-bottom: 28px; }
-.overlay { z-index: 3; }
+.overlay { z-index: 6; } /* au-dessus du volet de fiche (4) et de la carte */
 .card .logo[hidden] { display: none; }
 
 .action { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); font-size: 17px; padding: 12px 22px; z-index: 2; animation: pop .3s cubic-bezier(.2, 1.4, .4, 1); }
