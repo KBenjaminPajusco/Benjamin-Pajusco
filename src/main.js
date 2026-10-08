@@ -710,6 +710,8 @@ function goTo(z) {
     boat.pos.copy(p);
     boat.heading = Math.PI;
     boat.speed = 0;
+    // Le modèle suit tout de suite (sinon il reste à l'ancien endroit tant que la fiche fige le bateau).
+    boat.update(0, { steer: 0, power: 0, brake: true }, null);
     // Lieu à terre : on pose le marin devant ce qu'il vient voir.
     const spot = z.land && (world.landingSpot(z.land.x, z.land.z, 30) || world.landingSpot(p.x, p.y, 140));
     if (spot) disembark(spot);
