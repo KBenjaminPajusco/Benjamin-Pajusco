@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008115703';
-import { buildWorld, LAYOUT } from './world.js?v=20261008115703';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008115703';
-import { Walker } from './walker.js?v=20261008115703';
-import { Rib } from './rib.js?v=20261008115703';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008115703';
-import { STEPS, TEAM } from './cafe.js?v=20261008115703';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008115703';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008115703';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008115703';
-import { Race, COURSE } from './race.js?v=20261008115703';
-import { StaticMerger } from './optimize.js?v=20261008115703';
-import { solid } from './toon.js?v=20261008115703';
+import { Boat } from './boat.js?v=20261008115714';
+import { buildWorld, LAYOUT } from './world.js?v=20261008115714';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008115714';
+import { Walker } from './walker.js?v=20261008115714';
+import { Rib } from './rib.js?v=20261008115714';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008115714';
+import { STEPS, TEAM } from './cafe.js?v=20261008115714';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008115714';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008115714';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008115714';
+import { Race, COURSE } from './race.js?v=20261008115714';
+import { StaticMerger } from './optimize.js?v=20261008115714';
+import { solid } from './toon.js?v=20261008115714';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1030,7 +1030,7 @@ let dayTimer = 0;
 // --- Intro : le menu s'affiche sur la mer (l'île hors champ) ; au choix, la caméra s'élève pour survoler
 // toute l'île, puis plonge sur le bateau et l'expérience commence. Un clic ou une touche passe le survol.
 const CINE = { fly: 2.6, hold: 1.6, dive: 2.6 };
-const ISLAND_VIEW = { x: 15, z: -298, w: 520, d: 380 }; // centre et emprise de l'île (pour la cadrer entière)
+const ISLAND_VIEW = { x: 52, z: -160, w: 600, d: 650 }; // tout le plan d'eau : bouées du parcours, régate, phare et île
 let cine = { phase: 'menu', t: 0 };
 let cineOverview = false;
 const smooth = (u) => u * u * (3 - 2 * u);
