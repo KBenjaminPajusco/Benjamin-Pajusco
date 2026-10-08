@@ -4,14 +4,19 @@ import { person } from './characters.js';
 // Le marin à terre : on le dirige comme le bateau, mais relativement à l'écran (haut = nord).
 export class Walker {
   constructor() {
-    this.root = person({ shirt: '#ff6a4d', pants: '#26324a' });
+    this.root = person({ shirt: '#ff6a4d', pants: '#26324a', skin: '#f2c9a0', hair: '#3a2618' });
     this.root.scale.setScalar(2.4);
-    const xray = new THREE.MeshBasicMaterial({ color: '#ff6a4d', transparent: true, opacity: 0.85, depthWrite: false, depthFunc: THREE.GreaterDepth });
+    // Silhouette visible à travers les bâtiments. Elle est dessinée après le décor mais avant le personnage :
+    // elle n'apparaît donc que là où un bâtiment le cache, jamais quand un bras passe devant le torse.
+    const xray = new THREE.MeshBasicMaterial({ color: '#ff6a4d', depthWrite: false, depthFunc: THREE.GreaterDepth });
     const meshes = [];
     this.root.traverse((o) => { if (o.isMesh && !(o.material instanceof THREE.ShaderMaterial)) meshes.push(o); });
+    // Les contours du personnage aussi passent après la silhouette (sinon ils la déclenchent en liseré).
+    this.root.traverse((o) => { if (o.isMesh && o.material instanceof THREE.ShaderMaterial) o.renderOrder = 3; });
     for (const m of meshes) {
+      m.renderOrder = 2;
       const ghost = new THREE.Mesh(m.geometry, xray);
-      ghost.renderOrder = 10;
+      ghost.renderOrder = 1;
       m.add(ghost);
     }
     this.root.visible = false;
