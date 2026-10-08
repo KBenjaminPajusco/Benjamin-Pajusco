@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon } from './toon.js?v=20261008115753';
-import { person } from './characters.js?v=20261008115753';
+import { solid, toon } from './toon.js?v=20261008120131';
+import { person } from './characters.js?v=20261008120131';
 
 // L'île du port : un littoral organique (courbe fermée) au lieu d'un quai rectangulaire,
 // une corniche en bord de mer avec ses joggeurs et ses lampadaires.
@@ -114,30 +114,6 @@ export function buildIsland({ root, anim, land, ctrl, top, S, corniche }) {
     l.rotation.y = Math.atan2(p.nx, p.nz); // la lanterne penche vers la promenade
     root.add(l);
   }
-
-  // Joggeurs qui font des allers-retours sur la corniche.
-  const route = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(p.x, 0, p.z)));
-  const tan = new THREE.Vector3();
-  const shirts = ['#ff6a4d', '#4d7cff', '#ffc845', '#2f9e55', '#a25dd9'];
-  const length = route.getLength();
-  shirts.forEach((c, i) => {
-    const r = person({ shirt: c, pants: '#26324a' });
-    r.scale.setScalar(S);
-    root.add(r);
-    const speed = 7 + i * 0.9, ph = i / shirts.length;
-    anim.push((dt, t) => {
-      const v = (ph + (t * speed) / (2 * length)) % 1;
-      const fwd = v < 0.5;
-      const u = fwd ? v * 2 : 2 - v * 2;
-      const p = route.getPointAt(u);
-      route.getTangentAt(u, tan);
-      const lane = fwd ? 1.2 : -1.2;
-      r.position.set(p.x - tan.z * lane, top + Math.abs(Math.sin(t * 9 + i)) * 0.35, p.z + tan.x * lane);
-      r.rotation.y = Math.atan2(tan.x, tan.z) + (fwd ? 0 : Math.PI);
-      r.userData.legs.forEach((l, k) => { l.rotation.x = Math.sin(t * 9 + i + k * Math.PI) * 0.9; });
-      r.userData.arms.forEach((l, k) => { l.rotation.x = -Math.sin(t * 9 + i + k * Math.PI) * 0.8; });
-    });
-  });
 
   return { poly, corniche: path };
 }

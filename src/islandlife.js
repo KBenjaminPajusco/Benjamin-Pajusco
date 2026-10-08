@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008115753';
-import { person } from './characters.js?v=20261008115753';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008115753';
+import { solid, rng, PALETTE } from './toon.js?v=20261008120131';
+import { person } from './characters.js?v=20261008120131';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008120131';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -154,6 +154,52 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     b.rotation.y = ry;
     life.add(b);
   }
+  // Piste de course autour du parc (entre la pelouse et la route), et ses joggeurs qui tournent.
+  const TRACK = { rx: park.rx + 7, rz: park.rz + 6, w: 1.4 };
+  const roadDashMat = new THREE.MeshBasicMaterial({ color: '#f6f1e7' });
+  {
+    const N = 120, pos = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      let nx = c / TRACK.rx, nz = s / TRACK.rz;
+      const nl = Math.hypot(nx, nz); nx /= nl; nz /= nl;
+      const x = park.x + c * TRACK.rx, z = park.z + s * TRACK.rz;
+      pos.push(x - nx * TRACK.w, Y + 0.07, z - nz * TRACK.w, x + nx * TRACK.w, Y + 0.07, z + nz * TRACK.w);
+      if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const track = new THREE.Mesh(g, new THREE.MeshToonMaterial({ color: '#d9734e', side: THREE.DoubleSide }));
+    track.receiveShadow = true;
+    life.add(track);
+    // Ligne de couloir en pointillés.
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 1.6).rotateX(-Math.PI / 2), roadDashMat);
+      m.position.set(park.x + Math.cos(a) * TRACK.rx, Y + 0.1, park.z + Math.sin(a) * TRACK.rz);
+      m.rotation.y = Math.atan2(-Math.sin(a) * TRACK.rx, Math.cos(a) * TRACK.rz);
+      life.add(m);
+    }
+  }
+  ['#ff6a4d', '#4d7cff', '#ffc845', '#2f9e55', '#a25dd9'].forEach((shirt, i) => {
+    const r = person({ shirt, pants: '#26324a' });
+    r.scale.setScalar(S);
+    life.add(r);
+    const speed = 6.5 + i * 0.8, ph = (i / 5) * Math.PI * 2, lane = i % 2 ? 0.6 : -0.6;
+    const per = Math.PI * (3 * (TRACK.rx + TRACK.rz) - Math.sqrt((3 * TRACK.rx + TRACK.rz) * (TRACK.rx + 3 * TRACK.rz))); // périmètre (Ramanujan)
+    anim.push((dt, t) => {
+      const a = ph + ((t * speed) / per) * Math.PI * 2;
+      const c = Math.cos(a), s = Math.sin(a);
+      const tx = -s * TRACK.rx, tz = c * TRACK.rz, tl = Math.hypot(tx, tz);
+      r.position.set(park.x + c * (TRACK.rx + lane), Y + Math.abs(Math.sin(t * 9 + i)) * 0.35, park.z + s * (TRACK.rz + lane));
+      r.rotation.y = Math.atan2(tx / tl, tz / tl);
+      r.userData.legs.forEach((l, k) => { l.rotation.x = Math.sin(t * 9 + i + k * Math.PI) * 0.9; });
+      r.userData.arms.forEach((l, k) => { l.rotation.x = -Math.sin(t * 9 + i + k * Math.PI) * 0.8; });
+    });
+  });
+
   for (const [dx, dz] of [[-park.rx + 4, 0], [park.rx - 4, 0], [0, -park.rz + 4], [0, park.rz - 4]]) {
     const l = lampPost(Y);
     l.position.set(park.x + dx, 0, park.z + dz);
@@ -335,7 +381,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   const free = (x, z, r) => {
     if (!insidePoly(poly.pts, x, z)) return false;
     if (nearestOnPoly(poly.pts, x, z).d < 13) return false; // laisse la corniche libre
-    if (Math.hypot((x - park.x) / park.rx, (z - park.z) / park.rz) < 1.05) return false;
+    if (Math.hypot((x - park.x) / park.rx, (z - park.z) / park.rz) < 1.32) return false; // parc et sa piste de course
     if (z > -290) return false; // front de mer
     if (roadSamples.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
     for (const b of blocks.boxes) if (Math.abs(x - b.x) < b.hx + r && Math.abs(z - b.z) < b.hz + r) return false;
@@ -357,5 +403,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
-  return { roads: roadLines };
+  return { roads: roadLines, park };
 }

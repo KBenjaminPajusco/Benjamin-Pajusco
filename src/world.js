@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008115753';
-import { makeWater } from './effects.js?v=20261008115753';
-import { person } from './characters.js?v=20261008115753';
-import { buildCafe } from './cafe.js?v=20261008115753';
-import { buildMatchRace } from './matchrace.js?v=20261008115753';
-import { buildPhare } from './phare.js?v=20261008115753';
-import { Boat } from './boat.js?v=20261008115753';
-import { buildDecor } from './decor.js?v=20261008115753';
-import { buildTown } from './town.js?v=20261008115753';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008115753';
-import { buildIslandLife } from './islandlife.js?v=20261008115753';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008115753';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008120131';
+import { makeWater } from './effects.js?v=20261008120131';
+import { person } from './characters.js?v=20261008120131';
+import { buildCafe } from './cafe.js?v=20261008120131';
+import { buildMatchRace } from './matchrace.js?v=20261008120131';
+import { buildPhare } from './phare.js?v=20261008120131';
+import { Boat } from './boat.js?v=20261008120131';
+import { buildDecor } from './decor.js?v=20261008120131';
+import { buildTown } from './town.js?v=20261008120131';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008120131';
+import { buildIslandLife } from './islandlife.js?v=20261008120131';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008120131';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -754,7 +754,7 @@ export function buildWorld(scene) {
 
     // Campus : les écoles, au nord du quai.
     buildCampus(380, -412, qTop, { polytech: [-48, 0], ronarch: [4, 0], guelph: [54, 2] });
-    labels.push({ pos: new THREE.Vector3(380, 4, -392), html: '🎓 Formation', cls: 'label-place' });
+    labels.push({ pos: new THREE.Vector3(382, qTop + 32, -432), html: 'Formation', cls: 'label-cat' }); // titre de la catégorie, au-dessus des écoles
 
     // K-Challenge : mon poste actuel, au bord de l'eau, avec un foiler amarré devant.
     {
@@ -801,6 +801,7 @@ export function buildWorld(scene) {
       parked(495, -287, 1);    // AC40
       parked(518, -287, 1.9);  // AC75
       labels.push({ pos: new THREE.Vector3(470, qTop + 24, -290), html: `<i>Emploi actuel</i>${kc.org}`, cls: 'label-buoy k-job', zone: 'kc', hideInZone: true });
+      labels.push({ pos: new THREE.Vector3(496, qTop + 36, -292), html: 'Emploi', cls: 'label-cat' });
       zones.push({
         id: 'kc', x: 520, z: -210, r: 30, zoom: 1.1, land: { x: 470, z: -285, r: 22 }, frame: { x: 496, z: -288, r: 34 },
         anchor: new THREE.Vector3(520, 12, -225), geo: { ...kc.geo, place: kc.place, flag: kc.flag },
@@ -854,13 +855,6 @@ export function buildWorld(scene) {
       blocks.circles.push({ x: 193, z: -345, r: 15 });
     }
 
-    // Course à pied : les joggeurs de la corniche.
-    {
-      const c = portIsland.corniche;
-      const mid = c[Math.floor(c.length * 0.45)];
-      labels.push({ pos: new THREE.Vector3(mid.x, 10, mid.z), html: '🏃 Course à pied', cls: 'label-place', zone: 'run', hideInZone: true });
-      zones.push({ id: 'run', x: mid.x, z: mid.z, r: 0, land: { x: mid.x, z: mid.z, r: 40 }, frame: { x: mid.x, z: mid.z, r: 30 }, anchor: new THREE.Vector3(mid.x, 9, mid.z), look: { x: mid.x, z: mid.z }, card: { ...INTERESTS.run, accent: '#d9734e' } });
-    }
 
     // Musculation : une aire de calisthénie bien à l'intérieur du parc (sol amortissant, barres, échelle, barres parallèles).
     const GYM = { x: 365, z: -362 };
@@ -919,6 +913,13 @@ export function buildWorld(scene) {
     // La vie de l'île : plage, parc, supermarché, immeubles, tour, entrepôts, arbres.
     const life = buildIslandLife({ root, anim, blocks, circles, poly: portIsland.poly, top: qTop, S, hills: land.hills });
     map.roads.push(...life.roads);
+    // Course à pied : la piste autour du parc ; sa fiche s'ouvre à l'est, en face de la musculation.
+    {
+      const P = life.park, rx = P.x + P.rx + 7;
+      labels.push({ pos: new THREE.Vector3(rx, 10, P.z), html: '🏃 Course à pied', cls: 'label-place', zone: 'run', hideInZone: true });
+      zones.push({ id: 'run', x: rx, z: P.z, r: 0, land: { x: rx, z: P.z, r: 24 }, frame: { x: P.x + 28, z: P.z, r: 36 }, anchor: new THREE.Vector3(rx, 9, P.z), card: { ...INTERESTS.run, accent: '#d9734e' } });
+      labels.push({ pos: new THREE.Vector3(P.x, qTop + 30, P.z - 6), html: 'Centres d’intérêt', cls: 'label-cat' });
+    }
   }
 
   shiftSince(harbourStart, HARBOUR_SHIFT.x, HARBOUR_SHIFT.z);
