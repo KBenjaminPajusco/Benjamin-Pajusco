@@ -707,6 +707,6 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .picker-foot .keys { display: none; }
 }
 
-/* Titres de catégories sur l'île (Formation, Emploi, Centres d'intérêt). */
-.label-cat { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; letter-spacing: .08em; text-transform: uppercase; background: var(--ink); color: #fff; border-color: var(--ink); padding: 2px 12px; }
-@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) { .label-cat { font-size: 14px; padding: 1px 8px; } }
+/* Titres de catégories sur l'île (Formation, Emploi, Centres d'intérêt) : style des grandes zones, un peu plus petit. */
+.label-region.label-cat { font-size: 20px; padding: 2px 12px 3px; }
+@media (max-width: 640px), (pointer: coarse) and (max-width: 950px) { .label-region.label-cat { font-size: 13px; padding: 1px 8px; border-width: 2px; } }

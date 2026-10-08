@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008120218';
-import { buildWorld, LAYOUT } from './world.js?v=20261008120218';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120218';
-import { Walker } from './walker.js?v=20261008120218';
-import { Rib } from './rib.js?v=20261008120218';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008120218';
-import { STEPS, TEAM } from './cafe.js?v=20261008120218';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120218';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120218';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120218';
-import { Race, COURSE } from './race.js?v=20261008120218';
-import { StaticMerger } from './optimize.js?v=20261008120218';
-import { solid } from './toon.js?v=20261008120218';
+import { Boat } from './boat.js?v=20261008120404';
+import { buildWorld, LAYOUT } from './world.js?v=20261008120404';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008120404';
+import { Walker } from './walker.js?v=20261008120404';
+import { Rib } from './rib.js?v=20261008120404';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008120404';
+import { STEPS, TEAM } from './cafe.js?v=20261008120404';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008120404';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008120404';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008120404';
+import { Race, COURSE } from './race.js?v=20261008120404';
+import { StaticMerger } from './optimize.js?v=20261008120404';
+import { solid } from './toon.js?v=20261008120404';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -55,6 +55,7 @@ const race = new Race(scene, world);
     },
   });
   world.labels.push({ pos: new THREE.Vector3(line.x1, 12, line.z), html: '🏁 Régate', cls: 'label-place', zone: 'regate', hideInZone: true });
+  world.labels.push({ pos: new THREE.Vector3((line.x0 + line.x1) / 2, 30, (line.z + COURSE.mark.z) / 2), html: 'Régate', cls: 'label-region', overworld: true });
 }
 let boat = new Boat(); // remplacé par un semi-rigide si le visiteur ne navigue pas
 boat.pos.set(LAYOUT.start.x, LAYOUT.start.z);
@@ -228,7 +229,7 @@ function updateLabels(focus) {
   for (const l of labels) {
     // Carte du monde : seuls les grands noms de régions ; sinon, tous les détails sauf ces noms.
     // Les titres de catégories (Formation, Emploi…) restent visibles aussi pendant le survol de l'intro.
-    const always = l.cls === 'label-cat';
+    const always = l.cls.includes('label-cat');
     if (!always && !!l.overworld !== overworld) { if (l.op !== 0) { l.op = 0; l.el.style.opacity = 0; } continue; }
     // zone : visible seulement dans cette zone ; hideInZone : masquée quand la grande fiche la remplace.
     const gated = l.zone && (l.hideInZone ? zoneId === l.zone : zoneId !== l.zone);

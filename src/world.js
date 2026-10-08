@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008120218';
-import { makeWater } from './effects.js?v=20261008120218';
-import { person } from './characters.js?v=20261008120218';
-import { buildCafe } from './cafe.js?v=20261008120218';
-import { buildMatchRace } from './matchrace.js?v=20261008120218';
-import { buildPhare } from './phare.js?v=20261008120218';
-import { Boat } from './boat.js?v=20261008120218';
-import { buildDecor } from './decor.js?v=20261008120218';
-import { buildTown } from './town.js?v=20261008120218';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008120218';
-import { buildIslandLife } from './islandlife.js?v=20261008120218';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008120218';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008120404';
+import { makeWater } from './effects.js?v=20261008120404';
+import { person } from './characters.js?v=20261008120404';
+import { buildCafe } from './cafe.js?v=20261008120404';
+import { buildMatchRace } from './matchrace.js?v=20261008120404';
+import { buildPhare } from './phare.js?v=20261008120404';
+import { Boat } from './boat.js?v=20261008120404';
+import { buildDecor } from './decor.js?v=20261008120404';
+import { buildTown } from './town.js?v=20261008120404';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008120404';
+import { buildIslandLife } from './islandlife.js?v=20261008120404';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008120404';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -754,7 +754,7 @@ export function buildWorld(scene) {
 
     // Campus : les écoles, au nord du quai.
     buildCampus(380, -412, qTop, { polytech: [-48, 0], ronarch: [4, 0], guelph: [54, 2] });
-    labels.push({ pos: new THREE.Vector3(382, qTop + 32, -432), html: 'Formation', cls: 'label-cat' }); // titre de la catégorie, au-dessus des écoles
+    labels.push({ pos: new THREE.Vector3(382, qTop + 32, -432), html: 'Formation', cls: 'label-region label-cat' }); // titre de la catégorie, au-dessus des écoles
 
     // K-Challenge : mon poste actuel, au bord de l'eau, avec un foiler amarré devant.
     {
@@ -801,7 +801,7 @@ export function buildWorld(scene) {
       parked(495, -287, 1);    // AC40
       parked(518, -287, 1.9);  // AC75
       labels.push({ pos: new THREE.Vector3(470, qTop + 24, -290), html: `<i>Emploi actuel</i>${kc.org}`, cls: 'label-buoy k-job', zone: 'kc', hideInZone: true });
-      labels.push({ pos: new THREE.Vector3(496, qTop + 36, -292), html: 'Emploi', cls: 'label-cat' });
+      labels.push({ pos: new THREE.Vector3(496, qTop + 36, -292), html: 'Emploi', cls: 'label-region label-cat' });
       zones.push({
         id: 'kc', x: 520, z: -210, r: 30, zoom: 1.1, land: { x: 470, z: -285, r: 22 }, frame: { x: 496, z: -288, r: 34 },
         anchor: new THREE.Vector3(520, 12, -225), geo: { ...kc.geo, place: kc.place, flag: kc.flag },
@@ -918,7 +918,7 @@ export function buildWorld(scene) {
       const P = life.park, rx = P.x + P.rx + 7;
       labels.push({ pos: new THREE.Vector3(rx, 10, P.z), html: '🏃 Course à pied', cls: 'label-place', zone: 'run', hideInZone: true });
       zones.push({ id: 'run', x: rx, z: P.z, r: 0, land: { x: rx, z: P.z, r: 24 }, frame: { x: P.x + 28, z: P.z, r: 36 }, anchor: new THREE.Vector3(rx, 9, P.z), card: { ...INTERESTS.run, accent: '#d9734e' } });
-      labels.push({ pos: new THREE.Vector3(P.x, qTop + 30, P.z - 6), html: 'Centres d’intérêt', cls: 'label-cat' });
+      labels.push({ pos: new THREE.Vector3(P.x, qTop + 30, P.z - 6), html: 'Centres d’intérêt', cls: 'label-region label-cat' });
     }
   }
 

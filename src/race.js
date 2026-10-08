@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid } from './toon.js?v=20261008120218';
-import { Boat } from './boat.js?v=20261008120218';
+import { solid } from './toon.js?v=20261008120404';
+import { Boat } from './boat.js?v=20261008120404';
 
 // Régate à l'ouest du plan d'eau : 2 foilers IA (même physique que le joueur),
 // départ au sud, bouée au vent au nord, arrivée sur la ligne de départ.
@@ -71,12 +71,35 @@ export class Race {
     this.committee.position.set(line.x1, 0, line.z);
     scene.add(this.committee);
     const pin = bigMark('#ff9f1c');
-    pin.scale.setScalar(0.6);
+    pin.scale.setScalar(0.9);
     pin.position.set(line.x0, 0, line.z);
     scene.add(pin);
     const wm = bigMark('#ffc845');
+    wm.scale.setScalar(1.5);
     wm.position.set(mark.x, 0, mark.z);
     scene.add(wm);
+    // Halos colorés sur l'eau autour des marques : on les repère même vus de très haut.
+    const halo = (x, z, color, r) => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 1.8, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
+      m.position.set(x, 0.14, z);
+      scene.add(m);
+    };
+    halo(mark.x, mark.z, '#ffc845', 7);
+    halo(line.x0, line.z, '#ff9f1c', 5);
+    halo(line.x1, line.z, '#e8eef5', 8);
+    // Limite du plan d'eau de course : pointillés larges et bouées d'angle.
+    const B = { x0: line.x0 - 34, x1: line.x1 + 34, z0: mark.z - 30, z1: line.z + 42 };
+    const edge = { color: '#ffffff', opacity: 0.55, width: 1.1, dash: 5, gap: 4 };
+    dashed(scene, B.x0, B.z0, B.x1, B.z0, edge);
+    dashed(scene, B.x1, B.z0, B.x1, B.z1, edge);
+    dashed(scene, B.x1, B.z1, B.x0, B.z1, edge);
+    dashed(scene, B.x0, B.z1, B.x0, B.z0, edge);
+    for (const [cx, cz] of [[B.x0, B.z0], [B.x1, B.z0], [B.x1, B.z1], [B.x0, B.z1]]) {
+      const b = solid(new THREE.CylinderGeometry(1.1, 1.4, 3, 8).translate(0, 1.2, 0), '#ff6a4d', { outlineWidth: 0.06 });
+      b.position.set(cx, 0, cz);
+      scene.add(b);
+      halo(cx, cz, '#ff6a4d', 3);
+    }
     world.addObstacle({ x: line.x1, z: line.z, r: 5 });
     world.addObstacle({ x: line.x0, z: line.z, r: 2 });
     world.addObstacle({ x: mark.x, z: mark.z, r: 2.6 });
