@@ -736,6 +736,12 @@ function showToast(text, kind = 'info') {
 }
 const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+// --- Photo de profil : un clic sur l'avatar l'agrandit.
+const photoEl = $('#photo');
+$('.avatar-btn').addEventListener('click', () => { photoEl.hidden = false; });
+photoEl.addEventListener('click', (e) => { if (e.target === photoEl || e.target.closest('.close')) photoEl.hidden = true; });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') photoEl.hidden = true; });
+
 // --- Rapport de perf d'après course : traces, vitesses et TWA moyens par bord, manœuvres.
 const reportEl = $('#race-report');
 reportEl.querySelector('.close').addEventListener('click', () => { reportEl.hidden = true; });

@@ -599,3 +599,14 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 
 @media (max-width: 640px), (pointer: coarse) and (max-width: 950px) { .brand .avatar { width: 28px; height: 28px; border-width: 1.5px; } }
 .brand:has(.avatar) { padding-left: 8px; gap: 10px; }
+
+/* Avatar cliquable et sa vue agrandie. */
+.avatar-btn { padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 50%; flex: none; }
+.avatar-btn:hover .avatar { transform: scale(1.06); }
+.brand .avatar { transition: transform .15s; }
+.photo-overlay { background: rgba(6, 13, 25, .75); backdrop-filter: blur(4px); cursor: zoom-out; }
+.photo-frame { position: relative; margin: 0; width: min(480px, calc(100vw - 32px)); background: var(--paper); border: 2.5px solid var(--ink); border-radius: 18px; padding: 10px; box-shadow: 0 8px 0 rgba(29, 37, 51, .35); cursor: default; animation: pop .3s cubic-bezier(.2, 1.4, .4, 1); }
+.photo-frame img { display: block; width: 100%; height: auto; border-radius: 12px; }
+.photo-frame figcaption { margin: 9px 4px 2px; font-size: 13.5px; font-weight: 600; }
+.photo-frame figcaption small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+.photo-frame .close { position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--paper); font: inherit; font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink); }

@@ -23,7 +23,7 @@
   <div id="labels"></div>
 
   <header class="brand">
-    <img class="avatar" src="assets/avatar.jpg" alt="Benjamin Pajusco" width="40" height="40">
+    <button class="avatar-btn" aria-label="Agrandir la photo"><img class="avatar" src="assets/avatar.jpg" alt="Benjamin Pajusco" width="40" height="40"></button>
     <div>
       <strong id="brand-name"></strong>
       <span id="brand-title"></span>
@@ -122,6 +122,13 @@
       </div>
       <p class="rr-note">Vitesses en nœuds. TWA : angle moyen au vent réel sur chaque bord (près : jusqu’à la bouée au vent, portant : retour à la ligne).</p>
     </div>
+  </section>
+  <section id="photo" class="overlay photo-overlay" hidden>
+    <figure class="photo-frame">
+      <button class="close" aria-label="Fermer">×</button>
+      <img src="assets/avatar-large.jpg" alt="Benjamin Pajusco" width="640" height="640">
+      <figcaption>Finale de la Sailing Champions League 2026 · 4<sup>e</sup> place avec l’APCC <small>Photo © Sailing Energy</small></figcaption>
+    </figure>
   </section>
   <button id="card-tab" class="card-tab" hidden aria-label="Rouvrir la fiche">ⓘ</button>
   <div id="stamp" hidden><svg class="geo" aria-hidden="true"></svg><div class="place"></div><div class="coords"></div><div class="dist"></div></div>
