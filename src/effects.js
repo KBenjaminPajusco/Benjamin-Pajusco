@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE } from './toon.js?v=20261008155007';
+import { PALETTE } from './toon.js?v=20261008162204';
 
 const MAX_SHORE = 32;
 

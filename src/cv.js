@@ -108,13 +108,13 @@ export const EXPERIENCES = [
     geo: { lat: 40.85, lon: 14.27 },
     year: '2026 →',
     org: 'K-Challenge Racing & Lab',
-    role: 'CDI projet — Ingénieur Performance & IA',
+    role: 'CDI projet — Ingénieur Performance & IA, Coupe de l’America',
     dates: 'depuis sept. 2026',
     place: 'Naples',
     flag: 'IT',
     kind: 'job',
-    body: 'Infrastructure logicielle et conception des outils de performance, avec l’IA au cœur de la méthode.',
-    tags: ['Infrastructure logicielle', 'Conception logicielle', 'IA'],
+    body: 'Pour la Coupe de l’America : infrastructure logicielle et conception des outils de performance de l’équipe, avec l’IA au cœur de la méthode.',
+    tags: ['Coupe de l’America', 'Infrastructure logicielle', 'Conception logicielle', 'IA'],
   },
 ];
 
