@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import { solid } from './toon.js';
 import { Boat } from './boat.js';
 
-// Régate en flotte à l'ouest du plan d'eau : 7 foilers IA (même physique que le joueur),
+// Régate à l'ouest du plan d'eau : 2 foilers IA (même physique que le joueur),
 // départ au sud, bouée au vent au nord, arrivée sur la ligne de départ.
+// Les IA font un vrai départ : attente sous la ligne, puis approche chronométrée tribord amure
+// pour couper la ligne entre le comité et la bouée au moment du signal.
 // Règles de base : bâbord amure s'écarte de tribord amure ; au vent s'écarte de sous le vent ;
 // le bateau en route libre derrière s'écarte de celui devant.
 
@@ -12,9 +14,27 @@ const CLOSE_HAULED = 2.27; // ≈ 50° du vent : meilleur VMG au près avec la p
 const COUNTDOWN = 30;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const FLEET = [
-  { label: '1', accent: '#4d7cff' }, { label: '2', accent: '#2f9e55' }, { label: '3', accent: '#ffc845' },
-  { label: '4', accent: '#a25dd9' }, { label: '5', accent: '#3ec7c2' }, { label: '6', accent: '#e8404a' }, { label: '7', accent: '#1d2533' },
+  { label: '1', accent: '#4d7cff', cross: 0.32, hold: 52 },
+  { label: '2', accent: '#2f9e55', cross: 0.66, hold: 60 },
 ];
+// Route tribord amure au près (cap -CLOSE_HAULED) : sens de marche, et vitesse attendue avec la polaire.
+const STBD = { x: Math.sin(-CLOSE_HAULED), z: Math.cos(-CLOSE_HAULED) };
+const V_CLOSE = 26 * 0.75;
+const ROUND = { wide: 11 }; // marge laissée à la bouée au vent
+
+// Trait pointillé posé sur l'eau (ligne de départ, laylines).
+function dashed(scene, ax, az, bx, bz, { dash = 3, gap = 2.2, width = 0.45, color = '#ffffff', opacity = 0.75 } = {}) {
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+  const len = Math.hypot(bx - ax, bz - az), n = Math.floor(len / (dash + gap));
+  const ang = Math.atan2(bx - ax, bz - az);
+  for (let k = 0; k < n; k++) {
+    const t = (k * (dash + gap) + dash / 2 + (len - n * (dash + gap) + gap) / 2) / len;
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(width, dash).rotateX(-Math.PI / 2), mat);
+    d.rotation.y = ang;
+    d.position.set(THREE.MathUtils.lerp(ax, bx, t), 0.12, THREE.MathUtils.lerp(az, bz, t));
+    scene.add(d);
+  }
+}
 
 function committeeBoat() {
   const g = new THREE.Group();
@@ -47,33 +67,39 @@ export class Race {
     const { line, mark } = COURSE;
 
     this.committee = committeeBoat();
-    this.committee.position.set(line.x0, 0, line.z);
+    // Comité à droite (côté tribord en regardant le vent), bouée viseur à gauche.
+    this.committee.position.set(line.x1, 0, line.z);
     scene.add(this.committee);
     const pin = bigMark('#ff9f1c');
     pin.scale.setScalar(0.6);
-    pin.position.set(line.x1, 0, line.z);
+    pin.position.set(line.x0, 0, line.z);
     scene.add(pin);
     const wm = bigMark('#ffc845');
     wm.position.set(mark.x, 0, mark.z);
     scene.add(wm);
-    world.addObstacle({ x: line.x0, z: line.z, r: 5 });
-    world.addObstacle({ x: line.x1, z: line.z, r: 2 });
+    world.addObstacle({ x: line.x1, z: line.z, r: 5 });
+    world.addObstacle({ x: line.x0, z: line.z, r: 2 });
     world.addObstacle({ x: mark.x, z: mark.z, r: 2.6 });
-    const dash = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75 });
-    for (let k = 1; k < 16; k += 2) {
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.5).rotateX(-Math.PI / 2), dash);
-      d.position.set(THREE.MathUtils.lerp(line.x0, line.x1, k / 16), 0.1, line.z);
-      scene.add(d);
-    }
+    // Ligne de départ / arrivée bien marquée, entre le comité et la bouée.
+    dashed(scene, line.x0 + 1.5, line.z, line.x1 - 4, line.z, { dash: 2.6, gap: 1.6, width: 0.7, opacity: 0.9 });
+    // Laylines : au départ, elles partent vers l'extérieur depuis la bouée viseur et le comité ;
+    // à la bouée au vent, les deux routes au près qui permettent de la passer sans virer.
+    const LAY = 46, lay = { color: '#ffe08a', opacity: 0.55, width: 0.4, dash: 2.2, gap: 2.6 };
+    dashed(scene, line.x0 + STBD.x * 3, line.z - STBD.z * 3, line.x0 + STBD.x * LAY, line.z - STBD.z * LAY, lay);
+    dashed(scene, line.x1 - STBD.x * 6, line.z - STBD.z * 6, line.x1 - STBD.x * LAY, line.z - STBD.z * LAY, lay);
+    dashed(scene, mark.x - STBD.x * 4, mark.z - STBD.z * 4, mark.x - STBD.x * LAY, mark.z - STBD.z * LAY, lay);
+    dashed(scene, mark.x + STBD.x * 4, mark.z - STBD.z * 4, mark.x + STBD.x * LAY, mark.z - STBD.z * LAY, lay);
 
     // La flotte IA.
     this.ai = FLEET.map((f, i) => {
       const boat = new Boat({ label: f.label, accent: f.accent, hullColor: i % 2 ? '#f6f1e7' : '#e7eef4' });
-      const slot = THREE.MathUtils.lerp(line.x0 + 18, line.x1 - 8, i / (FLEET.length - 1)); // pas collé au comité
-      boat.pos.set(slot, line.z + 28 + (i % 3) * 6);
+      // Point de passage visé sur la ligne, et point d'attente en aval sur la route tribord amure.
+      const cross = THREE.MathUtils.lerp(line.x0, line.x1, f.cross);
+      const hold = { x: cross - STBD.x * f.hold, z: line.z - STBD.z * f.hold };
+      boat.pos.set(hold.x, hold.z);
       boat.heading = Math.PI / 2;
       scene.add(boat.root);
-      return { boat, name: `Bateau ${f.label}`, accent: f.accent, slot, phase: 'pre', tackCd: 0, margin: 0.05 + Math.random() * 0.25, lane: 45 + Math.random() * 30, finished: null };
+      return { boat, name: `Bateau ${f.label}`, accent: f.accent, slot: cross, cross, hold, launched: false, phase: 'pre', tackCd: 0, margin: 0.05 + Math.random() * 0.2, lane: 45 + Math.random() * 25, finished: null };
     });
   }
 
@@ -93,7 +119,7 @@ export class Race {
     this.state = 'countdown';
     this.timer = COUNTDOWN;
     this.results = [];
-    for (const a of this.ai) { a.phase = 'pre'; a.finished = null; a.tackCd = 0; a.tack = -1; }
+    for (const a of this.ai) { a.phase = 'pre'; a.finished = null; a.tackCd = 0; a.tack = -1; a.launched = false; }
   }
 
   competitors() { return this.player && this.playerIn ? [...this.ai, this.player] : this.ai; }
@@ -141,22 +167,31 @@ export class Race {
     const others = this.competitors();
     for (const a of this.ai) {
       const b = a.boat;
-      let want = b.heading, power = 1;
+      let want = b.heading, power = 1, brake = false;
       if (this.state !== 'racing' || a.phase === 'pre') {
-        const go = this.state === 'countdown' && this.timer < 4.2;
-        if (this.state === 'racing' || go) {
-          want = -CLOSE_HAULED; // départ tribord amure, plein pot vers la ligne
-          if (this.state === 'racing' && b.pos.y < line.z) { a.phase = 'beat'; a.tackCd = 2; a.tack = -1; }
+        const dist = Math.hypot(a.cross - b.pos.x, line.z - b.pos.y);
+        // Lancement quand le temps pour rejoindre la ligne (accélération comprise) égale le temps restant.
+        if (this.state === 'countdown' && !a.launched && this.timer <= dist / (V_CLOSE * 0.85) + 2.2) a.launched = true;
+        if (this.state === 'racing' || a.launched) {
+          // Approche tribord amure vers son point de la ligne, sans jamais remonter plus haut que le près.
+          want = Math.max(Math.atan2(a.cross - b.pos.x, line.z - 6 - b.pos.y), -CLOSE_HAULED);
+          if (this.state === 'countdown') {
+            // En avance ? On choque (on ralentit) pour ne pas couper la ligne avant le signal.
+            const eta = dist / Math.max((b.speed + V_CLOSE) / 2, 4);
+            if (eta < this.timer - 1.2) power = 0.6;
+            if (dist < 9 && this.timer > 1) { power = 0; brake = true; }
+          }
+          if (this.state === 'racing' && b.pos.y < line.z - 1) { a.phase = 'beat'; a.tackCd = 3; a.tack = -1; }
         } else {
-          // Attente sous la ligne, à sa place : on tourne doucement autour de son point.
-          const hx = a.slot, hz = line.z + 24;
-          const dx = hx - b.pos.x, dz = hz - b.pos.y, d = Math.hypot(dx, dz);
+          // Attente sous la ligne : petits ronds autour de son point, au ralenti.
+          const dx = a.hold.x - b.pos.x, dz = a.hold.z - b.pos.y, d = Math.hypot(dx, dz);
           want = d > 8 ? Math.atan2(dx, dz) : b.heading + 0.9;
           power = d > 8 ? 0.45 : 0.18;
         }
       } else if (a.phase === 'beat') {
         a.tackCd -= dt;
-        const bear = Math.atan2(mark.x - b.pos.x, mark.z - b.pos.y);
+        // On vise un point à droite de la bouée (elle se laisse à bâbord), pas la bouée elle-même.
+        const bear = Math.atan2(mark.x + ROUND.wide - b.pos.x, mark.z + 2 - b.pos.y);
         // Amure visée mémorisée : le virement va au bout même si le bateau met du temps à passer le lit du vent.
         const portTack = a.tack > 0; // bâbord amure = cap au nord-est
         const fetch = portTack ? bear > -(CLOSE_HAULED + a.margin) && bear < 0 : bear < CLOSE_HAULED + a.margin && bear > 0;
@@ -168,8 +203,12 @@ export class Race {
         want = a.tack * CLOSE_HAULED;
         // Sur la lay-line : on vise directement la bouée dès qu'elle est atteignable sans virer.
         if ((a.tack > 0 && bear > 0 && bear <= CLOSE_HAULED) || (a.tack < 0 && bear < 0 && bear >= -CLOSE_HAULED)) want = bear;
-        // Bouée contournée (ou dépassée au vent) : on part au portant.
-        if (Math.hypot(mark.x - b.pos.x, mark.z - b.pos.y) < 18 || b.pos.y < mark.z - 6) a.phase = 'run';
+        // Arrivé à hauteur de la bouée : on l'enroule.
+        if (Math.hypot(mark.x + ROUND.wide - b.pos.x, mark.z + 2 - b.pos.y) < 9 || b.pos.y < mark.z + 2) a.phase = 'round';
+      } else if (a.phase === 'round') {
+        // Enroulé par le large : on passe au nord de la bouée en tournant à gauche, puis on abat.
+        want = Math.atan2(mark.x - ROUND.wide * 0.6 - b.pos.x, mark.z - ROUND.wide - b.pos.y);
+        if (b.pos.x < mark.x - 2 || Math.hypot(mark.x - b.pos.x, mark.z - b.pos.y) > 40) a.phase = 'run';
       } else if (a.phase === 'run') {
         want = Math.atan2((line.x0 + line.x1) / 2 + (a.slot - axis) * 0.5 - b.pos.x, line.z + 4 - b.pos.y);
         if (b.pos.y > line.z && b.pos.x > line.x0 && b.pos.x < line.x1) this.finish(a);
@@ -203,7 +242,7 @@ export class Race {
       const input = {
         steer: THREE.MathUtils.clamp(wrap(want - b.heading) * 2 + steerBias, -1, 1),
         power,
-        brake: false,
+        brake,
       };
       b.update(dt, input, this.world.collide);
     }
@@ -285,7 +324,7 @@ export class Race {
       const b = c.human ? playerBoat : c.boat;
       if (c.finished !== null) return 1e6 - c.finished;
       if (c.phase === 'run') return 2000 - Math.abs(line.z - b.pos.y);
-      if (c.phase === 'beat') return 1000 - Math.hypot(mark.x - b.pos.x, mark.z - b.pos.y);
+      if (c.phase === 'beat' || c.phase === 'round') return 1000 - Math.hypot(mark.x - b.pos.x, mark.z - b.pos.y) + (c.phase === 'round' ? 50 : 0);
       return 0;
     };
     return [...this.competitors()].sort((p, q) => score(q) - score(p));

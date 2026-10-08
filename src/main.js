@@ -45,14 +45,14 @@ const race = new Race(scene, world);
   const { line } = COURSE;
   const cx = (line.x0 + line.x1) / 2;
   world.zones.push({
-    id: 'regate', x: cx, z: line.z + 18, r: 46, zoom: 1.4, anchor: new THREE.Vector3(line.x0, 10, line.z),
+    id: 'regate', x: cx, z: line.z + 18, r: 46, zoom: 1.4, anchor: new THREE.Vector3(line.x1, 10, line.z),
     card: {
       kicker: 'Régate en flotte', title: 'Prends le départ !', accent: '#ffc845', raceBtn: true,
-      body: 'Contre 7 foilers. Passe la ligne vers le nord après le signal, contourne la bouée jaune au nord, reviens finir sur la ligne. Règles : bâbord amure s’écarte de tribord amure ; au vent s’écarte de sous le vent ; celui qui est derrière s’écarte de celui devant.',
+      body: 'Contre 2 foilers. Passe la ligne (entre la bouée viseur et le comité) vers le nord après le signal, enroule la bouée jaune au nord en la laissant à bâbord, reviens finir sur la ligne. Règles : bâbord amure s’écarte de tribord amure ; au vent s’écarte de sous le vent ; celui qui est derrière s’écarte de celui devant.',
       tags: ['Départ 30 s après inscription', 'Règles de base'],
     },
   });
-  world.labels.push({ pos: new THREE.Vector3(line.x0, 12, line.z), html: '🏁 Régate', cls: 'label-place', zone: 'regate', hideInZone: true });
+  world.labels.push({ pos: new THREE.Vector3(line.x1, 12, line.z), html: '🏁 Régate', cls: 'label-place', zone: 'regate', hideInZone: true });
 }
 let boat = new Boat(); // remplacé par un semi-rigide si le visiteur ne navigue pas
 boat.pos.set(LAYOUT.start.x, LAYOUT.start.z);
