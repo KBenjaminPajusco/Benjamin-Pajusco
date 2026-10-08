@@ -477,6 +477,9 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .card .btn { margin-top: 8px; padding: 7px 12px; font-size: 13px; }
   .card .meta { margin-top: 6px; }
 
+  /* Étapes de la boucle d'agents : numéro et icône seulement, le nom de l'étape en cours reste affiché. */
+  .label-step b { display: none; }
+  .label-step.active b { display: inline; }
   /* Pas de clavier sur téléphone : on retire la touche « E » des boutons. */
   .action kbd { display: none; }
   /* Bouton d'action : toujours au-dessus du tiroir. */
@@ -555,9 +558,6 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .card.docked .body, .card.docked .live .txt { font-size: 12px; }
   .telemetry { max-height: 40vh; }
   #intro .panel { max-height: calc(100vh - 16px); overflow: auto; }
-  /* Étapes de la boucle d'agents : numéro et icône seulement (le nom de l'étape en cours est dans la fiche). */
-  .label-step b { display: none; }
-  .label-step.active b { display: inline; }
   /* Grande carte : la carte à gauche, à la hauteur de l'écran, la liste des lieux à droite. */
   .panel.map-panel { grid-template-columns: auto minmax(0, 1fr); align-items: start; width: 100%; max-height: calc(100vh - 16px); padding: 8px; gap: 10px; overflow: hidden; }
   .map-stack { height: calc(100vh - 34px); width: auto; }
