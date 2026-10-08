@@ -255,6 +255,12 @@ function closeCard() {
   stamp.hidden = true;
 }
 card.querySelector('.card-close').addEventListener('click', closeCard);
+// Fiche d'arrivée : l'action principale est de mettre pied à terre, au quai le plus proche.
+card.querySelector('.land-btn').addEventListener('click', () => {
+  if (mode !== 'boat') return;
+  const spot = landing || world.landingSpot(boat.pos.x, boat.pos.y, 140);
+  if (spot) { disembark(spot); card.querySelector('.land-btn').hidden = true; }
+});
 cardTab.addEventListener('click', () => {
   dismissed = null;
   activeZone = null; // la prochaine mise à jour rouvre la fiche (et la carte) de la zone
@@ -426,6 +432,7 @@ function renderCard(z) {
   meta.textContent = c.meta || '';
   meta.hidden = !c.meta;
   card.querySelector('[data-open-cv]').hidden = !c.cta;
+  card.querySelector('.land-btn').hidden = !c.land || mode === 'walk';
   card.hidden = false;
   card.classList.remove('pop');
   void card.offsetWidth;

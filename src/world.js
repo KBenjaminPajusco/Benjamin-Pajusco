@@ -664,7 +664,7 @@ export function buildWorld(scene) {
 
     zones.push({
       id: 'port', x: 420, z: -230, r: 45, land: { x: 420, z: -238, r: 16 }, anchor: new THREE.Vector3(420, 10, -262), zoom: 1.1, look: { x: 420, z: -290 },
-      card: { kicker: 'Arrivée', title: 'Bienvenue sur l’île', sub: 'Merci d’avoir navigué jusqu’ici', body: 'On en discute ? Les liens sont en bas de la version rapide.', accent: PALETTE.accent, cta: true },
+      card: { kicker: 'Arrivée', title: 'Bienvenue sur l’île', sub: 'Merci d’avoir navigué jusqu’ici', body: 'Débarque pour explorer l’île : formation, emploi actuel, compétences et centres d’intérêt t’attendent à terre.', accent: PALETTE.accent, land: true },
     });
 
     // Collines : un peu de relief au nord-est et à l'ouest de l'île (on peut y monter à pied).
