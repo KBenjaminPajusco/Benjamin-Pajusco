@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008144522';
-import { person } from './characters.js?v=20261008144522';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008144522';
+import { solid, rng, PALETTE } from './toon.js?v=20261008144842';
+import { person } from './characters.js?v=20261008144842';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008144842';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -272,7 +272,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   spur(Math.PI * 0.72, [[322, -306], [306, -304]]); // capitainerie
   spur(Math.PI * 0.32, [[458, -307], [470, -303]]); // K-Challenge
   spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -362], [541, -372]]); // marché, entrepôts, tour
-  spur(-Math.PI * 0.12, [[468, -392], [466, -410], [470, -426], [462, -432], [430, -432], [408, -431]]); // campus (s'arrête devant IHT)
+  spur(-Math.PI * 0.12, [[468, -392], [466, -410], [470, -426], [462, -432], [430, -432], [360, -431], [305, -431]]); // campus : dessert les trois écoles
 
   // Lampadaires le long des routes : pas sur une autre chaussée, pas dans un bâtiment, pas trop serrés.
   const placedLamps = [];
