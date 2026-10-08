@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon, outline, PALETTE } from './toon.js?v=20261008154817';
-import { navLights } from './island.js?v=20261008154817';
+import { solid, toon, outline, PALETTE } from './toon.js?v=20261008155007';
+import { navLights } from './island.js?v=20261008155007';
 
 // Foiler monocoque stylisé. Seules les cotes globales s'inspirent d'un AC40
 // (L ≈ 12,5 m, bau ≈ 3,3 m, bras de foil ≈ 3 m) ; toute la géométrie est générée ici.
@@ -76,10 +76,7 @@ function sailTexture(label = 'BP', accent = PALETTE.accent) {
   ctx.fillStyle = PALETTE.sail; ctx.fillRect(0, 0, 256, 512);
   ctx.fillStyle = accent; ctx.fillRect(0, 150, 256, 26);
   ctx.fillStyle = '#26324a';
-  // Taille ajustée pour qu'un nom long (lien ?for=entreprise) tienne dans la voile.
   ctx.font = 'bold 120px "Space Grotesk", sans-serif';
-  const size = Math.max(40, Math.min(120, (120 * 170) / ctx.measureText(label).width));
-  ctx.font = `bold ${size}px "Space Grotesk", sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText(label, 100, 330);
   const tex = new THREE.CanvasTexture(c);

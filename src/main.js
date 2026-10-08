@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008154817';
-import { buildWorld, LAYOUT } from './world.js?v=20261008154817';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008154817';
-import { Walker } from './walker.js?v=20261008154817';
-import { Rib } from './rib.js?v=20261008154817';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008154817';
-import { STEPS, TEAM } from './cafe.js?v=20261008154817';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008154817';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008154817';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008154817';
-import { Race, COURSE } from './race.js?v=20261008154817';
-import { StaticMerger } from './optimize.js?v=20261008154817';
-import { solid, WIND } from './toon.js?v=20261008154817';
+import { Boat } from './boat.js?v=20261008155007';
+import { buildWorld, LAYOUT } from './world.js?v=20261008155007';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008155007';
+import { Walker } from './walker.js?v=20261008155007';
+import { Rib } from './rib.js?v=20261008155007';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008155007';
+import { STEPS, TEAM } from './cafe.js?v=20261008155007';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008155007';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008155007';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008155007';
+import { Race, COURSE } from './race.js?v=20261008155007';
+import { StaticMerger } from './optimize.js?v=20261008155007';
+import { solid, WIND } from './toon.js?v=20261008155007';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -57,23 +57,7 @@ const race = new Race(scene, world);
   world.labels.push({ pos: new THREE.Vector3(line.x1, 12, line.z), html: '🏁 Régate', cls: 'label-place', zone: 'regate', hideInZone: true });
   world.labels.push({ pos: new THREE.Vector3((line.x0 + line.x1) / 2, 30, (line.z + COURSE.mark.z) / 2), html: 'Régate', cls: 'label-region', overworld: true });
 }
-// Lien personnalisé : benjamin.pajusco.fr/?for=Ubisoft — le site s'adresse à l'entreprise (voile, accueil, titre, arrivée).
-// ?f=… : le même nom, brouillé pour ne pas se lire dans l'adresse (liens générés par tools/link.py).
-const KEY = [98, 112, 52, 50]; // simple brouillage, pas un secret
-function decodeFor(code) {
-  try {
-    const bin = atob(code.replace(/-/g, '+').replace(/_/g, '/'));
-    const bytes = Uint8Array.from(bin, (c, i) => c.charCodeAt(0) ^ KEY[i % KEY.length] ^ ((i * 7) & 0xff));
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch { return ''; }
-}
-const FOR = (() => {
-  const q = new URLSearchParams(location.search);
-  const raw = (q.get('for') || q.get('pour') || (q.get('f') ? decodeFor(q.get('f')) : '') || '').replace(/[-_+]+/g, ' ').replace(/[^\p{L}\p{N} &'.]/gu, '').trim().slice(0, 28);
-  return raw ? raw.replace(/(^|\s)(\p{L})/gu, (m, sp, c) => sp + c.toUpperCase()) : null;
-})();
-const SAIL_LABEL = FOR ? FOR.toUpperCase().slice(0, 10) : 'BP';
-let boat = new Boat({ label: SAIL_LABEL }); // remplacé par un semi-rigide si le visiteur ne navigue pas
+let boat = new Boat(); // remplacé par un semi-rigide si le visiteur ne navigue pas
 boat.pos.set(LAYOUT.start.x, LAYOUT.start.z);
 scene.add(boat.root);
 const wake = new Wake();
@@ -952,14 +936,6 @@ $('#brand-name').textContent = PROFILE.name;
 $('#brand-title').textContent = PROFILE.title;
 $('#intro-name').textContent = PROFILE.name;
 $('#intro-title').textContent = `${PROFILE.title} · ${PROFILE.tagline}`;
-if (FOR) {
-  // textContent partout : le nom vient de l'adresse, il n'est jamais interprété comme du HTML.
-  $('#intro-name').textContent = `Bonjour ${FOR} 👋 · ${PROFILE.name}`;
-  $('.picker-lead').textContent = `J’ai préparé ce portfolio pour ${FOR}. Navigue entre les bouées : chacune raconte une étape de mon parcours. L’île t’attend au nord.`;
-  document.title = `Benjamin Pajusco — pour ${FOR}`;
-  const port = world.zones.find((z) => z.id === 'port');
-  if (port) port.card = { ...port.card, sub: `Merci ${FOR} d’avoir navigué jusqu’ici` };
-}
 // Navigant : le foiler, avec le vent. Sinon (ou sans réponse) : un semi-rigide à moteur.
 const SAILOR_BY_DEFAULT = new URLSearchParams(location.search).has('navigant');
 function start(choice = SAILOR_BY_DEFAULT ? 'sail' : 'rib') {
@@ -1000,7 +976,7 @@ const picker = (() => {
     const cam = new THREE.PerspectiveCamera(30, 1, 1, 400);
     return { pivot, cam, x, size, speed: 0.5, hover: false };
   };
-  const sail = showcase(new Boat({ label: SAIL_LABEL }), -60, 17);
+  const sail = showcase(new Boat(), -60, 17);
   const rib = showcase(new Rib(), 60, 9);
   const items = [[sail, $('#start-sail')], [rib, $('#start-rib')]];
   for (const [it, el] of items) {
