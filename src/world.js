@@ -192,6 +192,7 @@ export function buildWorld(scene) {
       xz(z);
       if (z.land) xz(z.land);
       if (z.look) xz(z.look);
+      if (z.frame) xz(z.frame);
       if (z.anchor) { z.anchor.x += dx; z.anchor.z += dz; }
     });
   }
@@ -419,7 +420,7 @@ export function buildWorld(scene) {
     const school = (e, cx, cz, r, ax, ay, az) => {
       labels.push({ pos: new THREE.Vector3(ax, ay + 1.5, az), html: e.school, cls: 'label-place', zone: e.id, hideInZone: true });
       zones.push({
-        id: e.id, x: cx, z: cz, r: 0, land: { x: cx, z: cz, r },
+        id: e.id, x: cx, z: cz, r: 0, land: { x: cx, z: cz, r }, frame: { x: cx, z: cz, r: r * 0.85 },
         anchor: new THREE.Vector3(ax, ay, az), geo: { ...e.geo, place: e.place, flag: e.flag },
         card: { brand: e.brand, logo: e.logo, kicker: e.dates, title: e.school, sub: e.degree, tags: e.tags, body: e.body, meta: e.place, accent: e.brand.color },
       });
@@ -800,7 +801,7 @@ export function buildWorld(scene) {
       parked(518, -287, 1.9);  // AC75
       labels.push({ pos: new THREE.Vector3(470, qTop + 24, -290), html: `<i>Emploi actuel</i>${kc.org}`, cls: 'label-buoy k-job', zone: 'kc', hideInZone: true });
       zones.push({
-        id: 'kc', x: 520, z: -210, r: 30, zoom: 1.1, land: { x: 470, z: -285, r: 22 },
+        id: 'kc', x: 520, z: -210, r: 30, zoom: 1.1, land: { x: 470, z: -285, r: 22 }, frame: { x: 496, z: -288, r: 34 },
         anchor: new THREE.Vector3(520, 12, -225), geo: { ...kc.geo, place: kc.place, flag: kc.flag },
         card: {
           brand: kc.brand, logo: kc.logo, kicker: `Emploi actuel · ${kc.year}`, title: kc.org, sub: kc.role, tags: kc.tags, body: kc.body,
@@ -826,7 +827,7 @@ export function buildWorld(scene) {
     labels.push({ pos: new THREE.Vector3(355, 26, -306), html: '🏢 Open space des agents', cls: 'label-place' });
 
     cafeLoop = buildCafe({ root, anim, labels, blocks, qTop, S });
-    zones.push({ id: 'agents', x: 383, z: -284, r: 0, land: { x: 383, z: -284, r: 44 }, anchor: new THREE.Vector3(355, 21, -316), zoom: 1.05, look: { x: 360, z: -284 }, live: true, walkZoom: 1.45, cardSide: true, card: { ...AI_FLOW, accent: '#3ec7c2' } });
+    zones.push({ id: 'agents', x: 383, z: -284, r: 0, land: { x: 383, z: -284, r: 44 }, frame: { x: 376, z: -292, r: 40 }, anchor: new THREE.Vector3(355, 21, -316), zoom: 1.05, look: { x: 360, z: -284 }, live: true, walkZoom: 1.45, cardSide: true, card: { ...AI_FLOW, accent: '#3ec7c2' } });
 
     shiftSince(openSpaceStart, 139, -108);
 
@@ -857,7 +858,7 @@ export function buildWorld(scene) {
       const c = portIsland.corniche;
       const mid = c[Math.floor(c.length * 0.45)];
       labels.push({ pos: new THREE.Vector3(mid.x, 10, mid.z), html: '🏃 Course à pied', cls: 'label-place', zone: 'run', hideInZone: true });
-      zones.push({ id: 'run', x: mid.x, z: mid.z, r: 0, land: { x: mid.x, z: mid.z, r: 40 }, anchor: new THREE.Vector3(mid.x, 9, mid.z), look: { x: mid.x, z: mid.z }, card: { ...INTERESTS.run, accent: '#d9734e' } });
+      zones.push({ id: 'run', x: mid.x, z: mid.z, r: 0, land: { x: mid.x, z: mid.z, r: 40 }, frame: { x: mid.x, z: mid.z, r: 30 }, anchor: new THREE.Vector3(mid.x, 9, mid.z), look: { x: mid.x, z: mid.z }, card: { ...INTERESTS.run, accent: '#d9734e' } });
     }
 
     // Musculation : une aire de calisthénie bien à l'intérieur du parc (sol amortissant, barres, échelle, barres parallèles).
@@ -897,7 +898,7 @@ export function buildWorld(scene) {
       dipper.rotation.y = Math.PI / 2;
     });
     labels.push({ pos: new THREE.Vector3(GYM.x, 14, GYM.z), html: '🏋️ Musculation', cls: 'label-place', zone: 'gym', hideInZone: true });
-    zones.push({ id: 'gym', x: GYM.x, z: GYM.z, r: 0, land: { x: GYM.x, z: GYM.z, r: 20 }, bar: { dx: -1.5, dz: -4, y: qTop + 6.2 }, anchor: new THREE.Vector3(GYM.x, 12, GYM.z), zoom: 0.9, look: { x: GYM.x, z: GYM.z }, card: { ...INTERESTS.gym, accent: '#2f9e55' } });
+    zones.push({ id: 'gym', x: GYM.x, z: GYM.z, r: 0, land: { x: GYM.x, z: GYM.z, r: 20 }, frame: { x: GYM.x, z: GYM.z, r: 16 }, bar: { dx: -1.5, dz: -4, y: qTop + 6.2 }, anchor: new THREE.Vector3(GYM.x, 12, GYM.z), zoom: 0.9, look: { x: GYM.x, z: GYM.z }, card: { ...INTERESTS.gym, accent: '#2f9e55' } });
 
     zones.push({
       id: 'port', x: 420, z: -230, r: 45, land: { x: 420, z: -238, r: 16 }, anchor: new THREE.Vector3(420, 10, -262), zoom: 1.1, look: { x: 420, z: -290 },

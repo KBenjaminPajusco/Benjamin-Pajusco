@@ -516,13 +516,15 @@ function showRegattas() {
   stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show');
 }
 const docked = () => MOBILE_MQ.matches;
+// À pied, quand la caméra cadre un lieu, la fiche se range à gauche et ne bouge plus.
+const framedCard = () => mode === 'walk' && !!activeZone?.frame && !docked();
 function placeCard() {
   if (!activeZone) return;
   card.classList.toggle('docked', docked());
-  card.classList.toggle('side', !!activeZone.cardSide && !docked());
+  card.classList.toggle('side', (!!activeZone.cardSide || framedCard()) && !docked());
   if (docked() || !activeZone.anchor) { card.style.transform = ''; return; }
-  // Certaines scènes (l'open space) se lisent en entier : la fiche se range à gauche au lieu de les recouvrir.
-  if (activeZone.cardSide) { card.style.transform = `translate(16px, ${84}px)`; return; }
+  // Certaines scènes (l'open space, les lieux cadrés à pied) se lisent en entier : la fiche se range à gauche.
+  if (activeZone.cardSide || framedCard()) { card.style.transform = `translate(16px, ${84}px)`; return; }
   const p = toScreen(activeZone.anchor);
   const m = 16, top = 84;
   let x = THREE.MathUtils.clamp(p.x, cardSize.w / 2 + m, innerWidth - cardSize.w / 2 - m);
@@ -998,8 +1000,13 @@ function tick(dt) {
   updateAction(dt);
   race.update(dt, boat);
   updateRaceUi();
-  // À pied : près d'un lieu d'intérêt on se rapproche, entre deux on recule pour voir toute la ville.
-  const walkTarget = activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? 3.4 : 1.2;
+  // À pied, dans un lieu (bâtiment, parc, corniche) : la caméra se détache du marin et cadre le lieu,
+  // en s'élargissant juste assez pour le garder dans l'image ; un petit lieu garde un minimum de recul.
+  // Entre deux lieux, elle suit le marin et recule pour montrer la ville.
+  const framing = mode === 'walk' ? activeZone?.frame : null;
+  const walkTarget = framing
+    ? THREE.MathUtils.clamp(Math.max(framing.r, Math.hypot(walker.pos.x - framing.x, walker.pos.y - framing.z) + 8) / 30, 1, 2.6) / 0.8
+    : activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? 3.4 : 1.2;
   walkZoomS = THREE.MathUtils.damp(walkZoomS, walkTarget, 1.8, dt);
 
   // Lumière du jour : recalculée toutes les deux secondes à partir de l'heure locale.
@@ -1047,10 +1054,10 @@ function tick(dt) {
   // Pendant l'intro, on cadre le bateau et le nom flottant ensemble.
   let fx = started ? boat.pos.x + ahead.x : INTRO_VIEW.x;
   let fz = started ? boat.pos.y + ahead.y : INTRO_VIEW.z;
-  if (mode === 'walk') { fx = walker.pos.x; fz = walker.pos.y; }
+  if (mode === 'walk') { fx = framing ? framing.x : walker.pos.x; fz = framing ? framing.z : walker.pos.y; }
   // Téléphone : quand le tiroir de fiche est ouvert en bas, on remonte la scène pour garder le bateau visible.
   // Une zone peut attirer le regard vers ce qu'elle montre (le café, la piste…).
-  if (started && activeZone?.look) {
+  if (started && activeZone?.look && !framing) {
     const w = mode === 'walk' ? 0.3 : 0.5;
     fx += (activeZone.look.x - fx) * w;
     fz += (activeZone.look.z - fz) * w;
@@ -1059,9 +1066,10 @@ function tick(dt) {
   fx = THREE.MathUtils.lerp(fx, OVERWORLD.x * 0.7 + boat.pos.x * 0.3, ow);
   fz = THREE.MathUtils.lerp(fz, OVERWORLD.z * 0.7 + boat.pos.y * 0.3, ow);
   // Téléphone : la fiche occupe la gauche de l'écran, on recadre pour que le bateau reste au centre de la partie libre.
-  if (docked() && !card.hidden && started) {
+  // Idem sur ordinateur quand un lieu est cadré à pied : la fiche est rangée à gauche, le lieu se centre à droite.
+  if ((docked() || framing) && !card.hidden && started) {
     const viewW = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.distanceTo(focus) * camera.aspect;
-    const shift = (card.offsetWidth / innerWidth) * 0.5 * viewW;
+    const shift = ((card.offsetWidth + (docked() ? 0 : 16)) / innerWidth) * 0.5 * viewW;
     camRight.setFromMatrixColumn(camera.matrixWorld, 0);
     fx -= camRight.x * shift;
     fz -= camRight.z * shift;
