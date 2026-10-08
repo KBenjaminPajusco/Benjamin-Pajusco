@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid } from './toon.js?v=20261008144842';
-import { Boat } from './boat.js?v=20261008144842';
+import { solid } from './toon.js?v=20261008145322';
+import { Boat } from './boat.js?v=20261008145322';
 
 // Régate à l'ouest du plan d'eau : 2 foilers IA (même physique que le joueur),
 // départ au sud, bouée au vent au nord, arrivée sur la ligne de départ.

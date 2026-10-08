@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, rng, PALETTE } from './toon.js?v=20261008144842';
-import { person } from './characters.js?v=20261008144842';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008144842';
+import { solid, rng, PALETTE } from './toon.js?v=20261008145322';
+import { person } from './characters.js?v=20261008145322';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008145322';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -136,10 +136,61 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   pond.position.set(park.x + 20, Y + 0.09, park.z - 9);
   life.add(pond);
   block(park.x + 20, park.z - 9, 7, 7);
+  // --- Escalade : trois blocs de rocher avec prises colorées et crash pads, deux grimpeurs et un pareur.
+  const CLIMB = { x: park.x + 29, z: park.z + 14 };
+  {
+    const holds = ['#e8404a', '#ffc845', '#2f9e55', '#4d7cff', '#a25dd9', '#ff6a4d'];
+    const rocks = [{ dx: -6, dz: -3, r: 4.6, h: 1.55, ry: 0.4 }, { dx: 5, dz: -1, r: 3.8, h: 1.35, ry: 1.3 }, { dx: 0, dz: 7, r: 3.2, h: 1.1, ry: 2.2 }];
+    const RR = rng(77);
+    for (const rk of rocks) {
+      const g = new THREE.Group();
+      g.position.set(CLIMB.x + rk.dx, Y, CLIMB.z + rk.dz);
+      g.rotation.y = rk.ry;
+      g.add(solid(new THREE.DodecahedronGeometry(rk.r, 0).scale(1, rk.h, 0.85).translate(0, rk.r * rk.h * 0.62, 0), '#9aa3ad', { outlineWidth: 0.1 }));
+      // Prises colorées sur la face sud du bloc.
+      for (let k = 0; k < 9; k++) {
+        const a = -0.9 + RR() * 1.8, yy = 0.6 + RR() * rk.r * rk.h * 1.15;
+        const hold = solid(new THREE.IcosahedronGeometry(0.28, 0), holds[k % holds.length], { outlineWidth: 0 });
+        hold.position.set(Math.sin(a) * rk.r * 0.78, yy, Math.cos(a) * rk.r * 0.72);
+        g.add(hold);
+      }
+      life.add(g);
+      blocks.circles.push({ x: CLIMB.x + rk.dx, z: CLIMB.z + rk.dz, r: rk.r * 0.9 });
+    }
+    // Crash pads au pied des blocs.
+    for (const [dx, dz] of [[-6, 2], [5, 3.5]]) life.add(solid(new THREE.BoxGeometry(4.6, 0.6, 3).translate(CLIMB.x + dx, Y + 0.3, CLIMB.z + dz), '#2f6fd6', { outlineWidth: 0.05 }));
+    // Deux grimpeurs : ils montent prise après prise, puis redescendent ; un pareur suit le premier.
+    const climbers = [{ rk: rocks[0], shirt: '#ff6a4d', ph: 0, dur: 9 }, { rk: rocks[1], shirt: '#2f9e55', ph: 4, dur: 7.5 }];
+    for (const c of climbers) {
+      const p = person({ shirt: c.shirt, pants: '#26324a' });
+      p.scale.setScalar(S * 0.85);
+      life.add(p);
+      const top = c.rk.r * c.rk.h * 0.9;
+      const bx = CLIMB.x + c.rk.dx, bz = CLIMB.z + c.rk.dz;
+      anim.push((dt, t) => {
+        const u = ((t + c.ph) % c.dur) / c.dur;
+        // 0 → 0,8 : la montée ; 0,8 → 1 : la désescalade rapide.
+        const k = u < 0.8 ? u / 0.8 : 1 - (u - 0.8) / 0.2;
+        const y = 0.2 + k * top * 0.75;
+        const reach = u < 0.8 ? Math.sin(u * 40) : 0;
+        p.position.set(bx, Y + y, bz + c.rk.r * 0.78 + 0.6 - k * 1.2);
+        p.rotation.y = Math.PI; // face au rocher
+        p.userData.arms.forEach((a, i) => { a.rotation.x = Math.PI - 0.4 + (i ? reach : -reach) * 0.35; });
+        p.userData.legs.forEach((l, i) => { l.rotation.x = 0.35 + (i ? -reach : reach) * 0.4; });
+      });
+    }
+    const spotter = person({ shirt: '#ffc845', pants: '#55607a' });
+    spotter.scale.setScalar(S * 0.85);
+    spotter.position.set(CLIMB.x - 6, Y, CLIMB.z + 6.5);
+    spotter.rotation.y = Math.PI;
+    spotter.userData.arms.forEach((a) => { a.rotation.x = 2.2; });
+    life.add(spotter);
+  }
+  const climbFree = (x, z) => Math.hypot(x - CLIMB.x, z - CLIMB.z - 2) > 14;
   for (let k = 0; k < 26; k++) {
     const a = R() * Math.PI * 2, rr = 0.45 + R() * 0.45;
     const x = park.x + Math.cos(a) * park.rx * rr, z = park.z + Math.sin(a) * park.rz * rr;
-    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10) continue;
+    if (Math.abs(x - park.x) < 4 || Math.abs(z - park.z) < 4 || Math.hypot(x - park.x - 20, z - park.z + 9) < 10 || !climbFree(x, z)) continue;
     if (blocks.boxes.some((b) => Math.abs(x - b.x) < b.hx + 2 && Math.abs(z - b.z) < b.hz + 2)) continue; // ex. la muscu
     const t = leafy(R, Y);
     t.position.set(x, 0, z);
@@ -403,5 +454,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
-  return { roads: roadLines, park };
+  return { roads: roadLines, park, climb: CLIMB };
 }

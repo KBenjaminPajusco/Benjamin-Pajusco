@@ -152,6 +152,12 @@ export const INTERESTS = {
     body: 'Pratique de la musculation en salle et en extérieur, ainsi que la gymnastique.',
     tags: ['Musculation'],
   },
+  climb: {
+    kicker: 'Centre d’intérêt',
+    title: 'Escalade',
+    body: 'Escalade en loisir, niveau intermédiaire : du bloc et des voies, pour le plaisir de grimper.',
+    tags: ['Bloc', 'Loisir'],
+  },
 };
 
 // --- Le Phare des maîtrises : ce que je sais faire, et où je l'ai fait.

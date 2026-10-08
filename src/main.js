@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008144842';
-import { buildWorld, LAYOUT } from './world.js?v=20261008144842';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008144842';
-import { Walker } from './walker.js?v=20261008144842';
-import { Rib } from './rib.js?v=20261008144842';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008144842';
-import { STEPS, TEAM } from './cafe.js?v=20261008144842';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008144842';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008144842';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008144842';
-import { Race, COURSE } from './race.js?v=20261008144842';
-import { StaticMerger } from './optimize.js?v=20261008144842';
-import { solid } from './toon.js?v=20261008144842';
+import { Boat } from './boat.js?v=20261008145322';
+import { buildWorld, LAYOUT } from './world.js?v=20261008145322';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008145322';
+import { Walker } from './walker.js?v=20261008145322';
+import { Rib } from './rib.js?v=20261008145322';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008145322';
+import { STEPS, TEAM } from './cafe.js?v=20261008145322';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008145322';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008145322';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008145322';
+import { Race, COURSE } from './race.js?v=20261008145322';
+import { StaticMerger } from './optimize.js?v=20261008145322';
+import { solid } from './toon.js?v=20261008145322';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -549,13 +549,13 @@ function placeCard() {
 
 // --- Carte : mini-carte en bas à gauche, grande carte avec les lieux à rejoindre en un clic.
 const POI_GROUPS = [
-  { title: 'Centres d’intérêt', ids: ['run', 'gym'] },
+  { title: 'Centres d’intérêt', ids: ['run', 'gym', 'climb'] },
   { title: 'Flux IA', ids: ['agents'] },
   { title: 'Mon parcours', ids: EXPERIENCES.map((e) => e.id) },
   { title: 'Formation', ids: ['polytech', 'ronarch', 'guelph'] },
   { title: 'Lieux', ids: ['regate', 'phare', 'port'] },
 ];
-const POI_NAMES = { regate: 'Régate en flotte', phare: 'Le Phare des maîtrises', agents: 'Open space des agents', run: 'Course à pied', gym: 'Musculation', formation: 'Formation', monde: 'International', perf: 'Zone perf', port: 'Ponton d’arrivée' };
+const POI_NAMES = { regate: 'Régate en flotte', phare: 'Le Phare des maîtrises', agents: 'Open space des agents', run: 'Course à pied', gym: 'Musculation', climb: 'Escalade', formation: 'Formation', monde: 'International', perf: 'Zone perf', port: 'Ponton d’arrivée' };
 // Décalage des noms sur la grande carte (le port est compact, les noms se chevaucheraient).
 const MAP_LABEL_OFFSET = { agents: [0, -14, 'right'], run: [0, -14, 'left'], gym: [10, 5, 'left'], port: [0, 30, 'center'], perf: [10, 5, 'left'] };
 const poiName = (z) => POI_NAMES[z.id] || z.card.title;
@@ -564,7 +564,7 @@ const mm = $('#minimap');
 const big = $('#map-canvas');
 // Fenêtre de monde affichée, cadrée sur le contenu (et non sur toute la mer).
 const MAP_GROUPS = [
-  { name: 'Centres d’intérêt', ids: ['run', 'gym'], at: 'gym' }, // la corniche fait le tour de l'île : on pose le nom sur le parc
+  { name: 'Centres d’intérêt', ids: ['run', 'gym', 'climb'], at: 'gym' }, // la corniche fait le tour de l'île : on pose le nom sur le parc
   { name: 'Formation', ids: ['polytech', 'ronarch', 'guelph'] },
   { name: 'Emploi actuel', ids: ['kc'] },
   { name: 'Compétences', ids: ['phare'] },

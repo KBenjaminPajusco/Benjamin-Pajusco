@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008144842';
-import { makeWater } from './effects.js?v=20261008144842';
-import { person } from './characters.js?v=20261008144842';
-import { buildCafe } from './cafe.js?v=20261008144842';
-import { buildMatchRace } from './matchrace.js?v=20261008144842';
-import { buildPhare } from './phare.js?v=20261008144842';
-import { Boat } from './boat.js?v=20261008144842';
-import { buildDecor } from './decor.js?v=20261008144842';
-import { buildTown } from './town.js?v=20261008144842';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008144842';
-import { buildIslandLife } from './islandlife.js?v=20261008144842';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008144842';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008145322';
+import { makeWater } from './effects.js?v=20261008145322';
+import { person } from './characters.js?v=20261008145322';
+import { buildCafe } from './cafe.js?v=20261008145322';
+import { buildMatchRace } from './matchrace.js?v=20261008145322';
+import { buildPhare } from './phare.js?v=20261008145322';
+import { Boat } from './boat.js?v=20261008145322';
+import { buildDecor } from './decor.js?v=20261008145322';
+import { buildTown } from './town.js?v=20261008145322';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008145322';
+import { buildIslandLife } from './islandlife.js?v=20261008145322';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008145322';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -912,6 +912,10 @@ export function buildWorld(scene) {
       labels.push({ pos: new THREE.Vector3(rx, 10, P.z), html: '🏃 Course à pied', cls: 'label-place', zone: 'run', hideInZone: true });
       zones.push({ id: 'run', x: rx, z: P.z, r: 0, land: { x: rx, z: P.z, r: 24 }, frame: { x: P.x + 28, z: P.z, r: 36 }, anchor: new THREE.Vector3(rx, 9, P.z), card: { ...INTERESTS.run, accent: '#d9734e' } });
       labels.push({ pos: new THREE.Vector3(P.x, qTop + 30, P.z - 6), html: 'Centres d’intérêt', cls: 'label-region label-cat' });
+      // Escalade : l'aire de blocs du parc.
+      const C = life.climb;
+      labels.push({ pos: new THREE.Vector3(C.x, 16, C.z), html: '🧗 Escalade', cls: 'label-place', zone: 'climb', hideInZone: true });
+      zones.push({ id: 'climb', x: C.x, z: C.z, r: 0, land: { x: C.x, z: C.z + 3, r: 16 }, frame: { x: C.x, z: C.z + 2, r: 16 }, anchor: new THREE.Vector3(C.x, 14, C.z), card: { ...INTERESTS.climb, accent: '#8d6e63' } });
     }
   }
 
