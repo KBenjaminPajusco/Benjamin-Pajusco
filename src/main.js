@@ -261,6 +261,43 @@ cardTab.addEventListener('click', () => {
   cardTab.hidden = true;
 });
 let cardSize = { w: 0, h: 0 };
+
+// --- Tractions : chaque traction faite par un visiteur s'ajoute à un compteur partagé (service Abacus, sans compte).
+const PULLUP_API = 'https://abacus.jasoncameron.dev';
+const PULLUP_KEY = 'benjamin-pajusco-fr/tractions';
+let pullTotal = null, pullMine = 0, pullFetchedAt = -1e9;
+try { pullMine = +localStorage.getItem('tractions') || 0; } catch { /* stockage indisponible */ }
+function renderPullups() {
+  const el = card.querySelector('.pullup-count');
+  if (pullTotal === null) { el.textContent = pullMine ? `Toi : ${pullMine} traction${pullMine > 1 ? 's' : ''}` : ''; return; }
+  el.innerHTML = `<b>${pullTotal.toLocaleString('fr-FR')}</b> traction${pullTotal > 1 ? 's' : ''} faite${pullTotal > 1 ? 's' : ''} par les visiteurs du site`
+    + (pullMine ? `<span>dont ${pullMine} par toi</span>` : '');
+}
+function refreshPullups() {
+  renderPullups();
+  if (performance.now() - pullFetchedAt < 15000) return;
+  pullFetchedAt = performance.now();
+  fetch(`${PULLUP_API}/get/${PULLUP_KEY}`).then((r) => r.json()).then((d) => {
+    if (typeof d.value === 'number') { pullTotal = Math.max(pullTotal ?? 0, d.value); renderPullups(); }
+  }).catch(() => {});
+}
+function countPullups(n) {
+  pullMine += n;
+  try { localStorage.setItem('tractions', pullMine); } catch { /* stockage indisponible */ }
+  if (pullTotal !== null) pullTotal += n; // affichage immédiat, recalé par la réponse du serveur
+  renderPullups();
+  for (let i = 0; i < n; i++) {
+    fetch(`${PULLUP_API}/hit/${PULLUP_KEY}`).then((r) => r.json()).then((d) => {
+      if (typeof d.value === 'number') { pullTotal = Math.max(pullTotal ?? 0, d.value); renderPullups(); }
+    }).catch(() => {});
+  }
+}
+card.querySelector('.pullup-btn').addEventListener('click', () => {
+  if (mode !== 'walk') return;
+  const z = world.zones.find((q) => q.id === 'gym');
+  walker.startPull({ x: z.x + z.bar.dx, z: z.z + z.bar.dz, y: z.bar.y });
+});
+
 function renderCard(z) {
   const c = z.card;
   card.style.setProperty('--card-accent', c.accent || '#ff6a4d');
@@ -305,6 +342,8 @@ function renderCard(z) {
   extra.hidden = z.id !== 'agents';
   card.querySelector('.concepts-btn').hidden = !c.concepts;
   card.querySelector('.race-btn').hidden = !c.raceBtn;
+  card.querySelector('.pullup').hidden = z.id !== 'gym';
+  if (z.id === 'gym') refreshPullups();
   const meta = card.querySelector('.meta');
   meta.textContent = c.meta || '';
   meta.hidden = !c.meta;
@@ -790,7 +829,11 @@ function tick(dt) {
   if (mode === 'walk') {
     // À terre, le bateau reste amarré là où on l'a laissé.
     boat.update(dt, { steer: 0, power: 0, brake: true, moor: true }, world.collide);
-    walker.update(dt, readWalkInput(), world);
+    if (walker.pull) {
+      const wi = readWalkInput();
+      const reps = walker.updatePull(dt, wi.x !== 0 || wi.z !== 0);
+      if (reps) countPullups(reps);
+    } else walker.update(dt, readWalkInput(), world);
   } else {
     // Fiche ouverte et commandes lâchées : le bateau se fige en gardant sa vitesse (il repart d'un coup
     // dès qu'on reprend la barre) et le décor passe en noir et blanc pour mettre l'information en avant.

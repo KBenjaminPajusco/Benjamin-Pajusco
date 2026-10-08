@@ -557,3 +557,10 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
 .card-tab { position: fixed; left: 0; top: 40%; z-index: 4; border: 2.5px solid var(--ink); border-left: 0; border-radius: 0 12px 12px 0;
   background: var(--paper); font-size: 20px; padding: 10px 8px; color: var(--ink); cursor: pointer; animation: slide-in .3s ease-out; }
 @keyframes slide-in { from { transform: translateX(-100%); } to { transform: none; } }
+
+/* Tractions : bouton et compteur partagé dans la fiche Musculation. */
+.card .pullup { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.card .pullup .btn { margin-top: 0; background: #2f9e55; color: #fff; }
+.card .pullup-count { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.card .pullup-count b { color: var(--ink); font-size: 16px; }
+.card .pullup-count span { display: block; font-size: 12px; }

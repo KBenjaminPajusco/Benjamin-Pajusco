@@ -22,6 +22,57 @@ export class Walker {
     this.phase = 0;
   }
 
+  // Tractions à la barre : on saute s'accrocher, on enchaîne les répétitions demandées, puis on redescend.
+  startPull(bar) {
+    if (this.pull && this.pull.stage !== 'drop') { this.pull.queued = Math.min(this.pull.queued + 1, this.pull.done + 3); return; }
+    this.pull = { bar, stage: 'jump', t: 0, done: 0, queued: 1, from: this.pos.clone(), y0: this.y };
+  }
+
+  // Renvoie le nombre de tractions terminées pendant cette image. move = le visiteur reprend les commandes.
+  updatePull(dt, move) {
+    const p = this.pull, { legs, arms } = this.root.userData;
+    const SCALE = 2.4, hangY = p.bar.y - 2.32 * SCALE; // mains sur la barre, bras tendus
+    const UP = 0.5, TOP = 0.15, DOWN = 0.55, REST = 0.15, REP = UP + TOP + DOWN + REST;
+    let k = 0, x = p.bar.x, z = p.bar.z, y = hangY, reps = 0;
+    p.t += dt;
+    if (move && p.stage !== 'drop') { p.stage = 'drop'; p.t = 0; }
+    if (p.stage === 'jump') {
+      const s = Math.min(p.t / 0.35, 1);
+      x = THREE.MathUtils.lerp(p.from.x, p.bar.x, s); z = THREE.MathUtils.lerp(p.from.y, p.bar.z, s);
+      y = THREE.MathUtils.lerp(p.y0, hangY, s) + Math.sin(s * Math.PI) * 0.8;
+      arms.forEach((a) => { a.rotation.x = Math.PI * s; });
+      if (s >= 1) { p.stage = 'reps'; p.t = 0; }
+    } else if (p.stage === 'reps') {
+      if (p.t < UP) k = THREE.MathUtils.smoothstep(p.t / UP, 0, 1);
+      else if (p.t < UP + TOP) k = 1;
+      else if (p.t < UP + TOP + DOWN) k = 1 - THREE.MathUtils.smoothstep((p.t - UP - TOP) / DOWN, 0, 1);
+      if (!p.counted && p.t >= UP) { p.counted = true; p.done++; reps++; } // menton au-dessus de la barre
+      if (p.t >= REP) {
+        p.t = 0; p.counted = false;
+        if (p.done >= p.queued) p.stage = 'hang';
+      }
+    } else if (p.stage === 'hang') {
+      if (p.queued > p.done) { p.stage = 'reps'; p.t = 0; }
+      else if (p.t > 1.2) { p.stage = 'drop'; p.t = 0; }
+    } else if (p.stage === 'drop') {
+      const s = Math.min(p.t / 0.35, 1);
+      x = THREE.MathUtils.lerp(p.bar.x, p.from.x, s); z = THREE.MathUtils.lerp(p.bar.z, p.from.y, s);
+      y = THREE.MathUtils.lerp(hangY, p.y0, s);
+      arms.forEach((a) => { a.rotation.x = Math.PI * (1 - s); });
+      legs.forEach((l) => { l.rotation.x = 0; });
+      if (s >= 1) { this.pull = null; this.pos.copy(p.from); this.y = p.y0; }
+    }
+    if (p.stage === 'reps' || p.stage === 'hang') {
+      // Le corps monte de la longueur d'un avant-bras ; les bras se plient pour garder les mains sur la barre.
+      y = hangY + k * 0.72 * SCALE;
+      arms.forEach((a) => { a.rotation.x = Math.acos(THREE.MathUtils.clamp(k - 1, -1, 1)); });
+      legs.forEach((l) => { l.rotation.x = 0.2 + 0.35 * k; });
+    }
+    this.root.position.set(x, y, z);
+    this.root.rotation.y = 0; // face à la caméra
+    return reps;
+  }
+
   place(x, z, world) {
     this.pos.set(x, z);
     this.y = world.groundY(x, z) ?? 0;

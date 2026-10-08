@@ -659,7 +659,7 @@ export function buildWorld(scene) {
       dipper.rotation.y = Math.PI / 2;
     });
     labels.push({ pos: new THREE.Vector3(GYM.x, 14, GYM.z), html: '🏋️ Musculation', cls: 'label-place', zone: 'gym', hideInZone: true });
-    zones.push({ id: 'gym', x: GYM.x, z: GYM.z, r: 0, land: { x: GYM.x, z: GYM.z, r: 20 }, anchor: new THREE.Vector3(GYM.x, 12, GYM.z), zoom: 0.9, look: { x: GYM.x, z: GYM.z }, card: { ...INTERESTS.gym, accent: '#2f9e55' } });
+    zones.push({ id: 'gym', x: GYM.x, z: GYM.z, r: 0, land: { x: GYM.x, z: GYM.z, r: 20 }, bar: { dx: -1.5, dz: -4, y: qTop + 6.2 }, anchor: new THREE.Vector3(GYM.x, 12, GYM.z), zoom: 0.9, look: { x: GYM.x, z: GYM.z }, card: { ...INTERESTS.gym, accent: '#2f9e55' } });
 
     zones.push({
       id: 'port', x: 420, z: -230, r: 45, land: { x: 420, z: -238, r: 16 }, anchor: new THREE.Vector3(420, 10, -262), zoom: 1.1, look: { x: 420, z: -290 },
