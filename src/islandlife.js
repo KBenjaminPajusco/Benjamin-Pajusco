@@ -164,6 +164,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   // --- Réseau routier : une boucle autour du parc et des branches vers chaque bâtiment.
   const roadSamples = [];
   const roadLines = []; // tracés des rues, pour les cartes (rapport de course)
+  const lampSpots = []; // emplacements de lampadaires le long des routes
   const tanR = new THREE.Vector3();
   const road = (pts, closed = false, w = 3.6) => {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, Y + 0.07, z)), closed, 'catmullrom', 0.5);
@@ -177,6 +178,10 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
       pos.push(p.x - tanR.z * w, Y + 0.07, p.z + tanR.x * w, p.x + tanR.z * w, Y + 0.07, p.z - tanR.x * w);
       if (i < N) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
       if (i % 2 === 0) roadSamples.push({ x: p.x, z: p.z });
+      if (i % 10 === 5) {
+        const sd = (i / 10) % 2 < 1 ? 1 : -1, off = w + 1.8;
+        lampSpots.push({ x: p.x - tanR.z * off * sd, z: p.z + tanR.x * off * sd, ry: Math.atan2(tanR.z * sd, -tanR.x * sd) });
+      }
       if (i % 3 === 0 && i < N) {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 1.6).rotateX(-Math.PI / 2), roadDash);
         m.position.set(p.x, Y + 0.12, p.z);
@@ -222,6 +227,23 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   spur(Math.PI * 0.32, [[458, -307], [470, -303]]); // K-Challenge
   spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -362], [541, -372]]); // marché, entrepôts, tour
   spur(-Math.PI * 0.12, [[468, -392], [466, -410], [470, -426], [462, -432], [430, -432], [360, -431], [318, -431]]); // campus (s'arrête devant IHT)
+
+  // Lampadaires le long des routes : pas sur une autre chaussée, pas dans un bâtiment, pas trop serrés.
+  const placedLamps = [];
+  for (const s of lampSpots) {
+    if (!insidePoly(poly.pts, s.x, s.z) || nearestOnPoly(poly.pts, s.x, s.z).d < 4) continue;
+    if (roadSamples.some((p) => Math.hypot(p.x - s.x, p.z - s.z) < 4.6)) continue;
+    if (blocks.boxes.some((b) => Math.abs(s.x - b.x) < b.hx + 1 && Math.abs(s.z - b.z) < b.hz + 1)) continue;
+    if (blocks.circles.some((c) => Math.hypot(s.x - c.x, s.z - c.z) < c.r + 1)) continue;
+    if ((blocks.noTree || []).some((b) => Math.abs(s.x - b.x) < b.hx && Math.abs(s.z - b.z) < b.hz)) continue; // parkings, parvis
+    if (placedLamps.some((q) => Math.hypot(q.x - s.x, q.z - s.z) < 14)) continue;
+    const l = lampPost(Y);
+    l.position.set(s.x, 0, s.z);
+    l.rotation.y = s.ry;
+    life.add(l);
+    placedLamps.push(s);
+    blocks.circles.push({ x: s.x, z: s.z, r: 0.5 });
+  }
 
   // Voitures et vélos sur la boucle (voitures à droite, vélos sur le bord).
   const bike = (shirt) => {

@@ -580,7 +580,7 @@ export function buildWorld(scene) {
       const { noTree, plate, flat, parking, lawn } = campusKit(c, wx, wz);
       const brick = '#a8483a', brickDark = '#93392d', snow = '#f6fbff', stone = '#e9dccb';
       lawn([[-21, -16], [2, -17], [17, -16], [20, -9], [12, 2], [5, 9], [-6, 11], [-21, 10], [-23, -3]], snow, 0.052);
-      lawn([[-20, -26], [6, -26], [22, -26], [23, -40], [12, -50], [-10, -50], [-21, -42]], snow, 0.052);
+      lawn([[-20, -27], [6, -27.5], [22, -27.5], [25, -42], [16, -57], [-10, -54], [-21, -43]], snow, 0.052);
       noTree(-4, -3, 18, 12);
       // Aile ouest d'origine : brique, bandeaux de pierre, toit enneigé.
       c.add(solid(new THREE.BoxGeometry(7, 8, 20).translate(-15, 4, -5), brick, { outlineWidth: 0.16 }));
@@ -616,10 +616,10 @@ export function buildWorld(scene) {
       // Au nord : terrain de sport (lignes blanches), losange de baseball et parking.
       flat(22, 13, -7, -35, '#6fae55', 0.07);
       for (const [w, d, cx, cz] of [[22, 0.25, -7, -41.4], [22, 0.25, -7, -28.6], [0.25, 13, -17.9, -35], [0.25, 13, 3.9, -35], [0.25, 13, -7, -35]]) flat(w, d, cx, cz, '#ffffff', 0.09);
-      c.add(new THREE.Mesh(new THREE.CircleGeometry(9, 12, 0, Math.PI / 2).rotateX(-Math.PI / 2).rotateY(Math.PI * 0.75).translate(12, 0.08, -38), toon('#d9c49a')));
-      noTree(-7, -35, 12, 7);
-      noTree(12, -42, 8, 8);
-      parking(14, -29, 4, 1);
+      c.add(new THREE.Mesh(new THREE.CircleGeometry(9, 12, 0, Math.PI / 2).rotateX(-Math.PI / 2).rotateY(Math.PI * 0.75).translate(13, 0.075, -45), toon('#d9c49a')));
+      noTree(-7, -35, 13, 9);
+      noTree(13, -47, 9, 9);
+      parking(14, -31.5, 4, 1);
       c.add(sign(guelph, 17).translateX(-6.5).translateZ(-3));
       blocks.boxes.push(
         { x: wx - 15, z: wz - 5, hx: 3.7, hz: 10.2 }, { x: wx - 15, z: wz + 7, hx: 2.4, hz: 2.4 }, { x: wx - 6.5, z: wz - 3, hx: 4.7, hz: 4.2 },
