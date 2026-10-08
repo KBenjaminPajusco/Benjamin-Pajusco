@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon, outline, PALETTE } from './toon.js?v=20261008163005';
-import { navLights } from './island.js?v=20261008163005';
+import { solid, toon, outline, PALETTE } from './toon.js?v=20261008163212';
+import { navLights } from './island.js?v=20261008163212';
 
 // Foiler monocoque stylisé. Seules les cotes globales s'inspirent d'un AC40
 // (L ≈ 12,5 m, bau ≈ 3,3 m, bras de foil ≈ 3 m) ; toute la géométrie est générée ici.
