@@ -233,6 +233,96 @@ export function buildTown({ root, anim, labels, circles, blocks, land, qTop, S }
     });
   }
 
+  // --- Habillage du front de mer, entre la route du parc et le quai (les passants gardent leurs deux couloirs).
+  {
+    const ground = (w, d, x, z, color, y = 0.05) => town.add(new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2).translate(x, Y + y, z), toon(color)));
+    const solidAt = (geo, color, x, z, ry = 0, w = 0.04) => { const m = solid(geo, color, { outlineWidth: w }); m.position.set(x, Y, z); m.rotation.y = ry; town.add(m); return m; };
+    // Promenade dallée le long du quai, avec ses joints.
+    ground(166, 7.5, 369, -272.4, '#e7dcc6');
+    for (let x = 288; x <= 450; x += 6) ground(0.12, 7.5, x, -272.4, '#d6c9ae', 0.06);
+    // Bornes d'amarrage au bord du quai.
+    for (let x = 290; x <= 448; x += 8) solidAt(new THREE.CylinderGeometry(0.28, 0.34, 0.9, 6).translate(0, 0.45, 0), '#3c4a5c', x, -268.8, 0, 0.03);
+    // Bancs tournés vers la mer, chacun avec sa poubelle, entre les lampadaires.
+    const bench = (x, z, ry) => {
+      const g = new THREE.Group();
+      g.add(solid(new THREE.BoxGeometry(3.4, 0.25, 1).translate(0, 1, 0), PALETTE.wood, { outlineWidth: 0.04 }));
+      g.add(solid(new THREE.BoxGeometry(3.4, 0.9, 0.2).translate(0, 1.55, -0.45), PALETTE.wood, { outlineWidth: 0.04 }));
+      for (const dx of [-1.4, 1.4]) g.add(solid(new THREE.BoxGeometry(0.16, 1, 0.9).translate(dx, 0.5, 0), '#3c4a5c', { outlineWidth: 0.02 }));
+      g.position.set(x, Y, z);
+      g.rotation.y = ry;
+      town.add(g);
+      circles.push({ x, z, r: 1.8 });
+    };
+    const bin = (x, z) => {
+      solidAt(new THREE.CylinderGeometry(0.45, 0.4, 1.2, 8).translate(0, 0.6, 0), '#2f6b5a', x, z, 0, 0.04);
+      solidAt(new THREE.CylinderGeometry(0.5, 0.5, 0.12, 8).translate(0, 1.26, 0), '#3c4a5c', x, z, 0, 0.02);
+    };
+    for (const x of [304, 328, 352, 400, 424]) { bench(x, -277.6, 0); bin(x + 3.2, -277.4); }
+    // Jardinières plantées derrière la promenade, coupées par des passages.
+    const flowers = ['#e8404a', '#ffc845', '#ffffff', '#a25dd9'];
+    let fk = 0;
+    for (const [x0, x1] of [[290, 322], [338, 358], [386, 406], [420, 450]]) {
+      const cx = (x0 + x1) / 2, w = x1 - x0;
+      solidAt(new THREE.BoxGeometry(w, 0.6, 3).translate(0, 0.3, 0), '#cfc3a6', cx, -282, 0, 0.05);
+      ground(w - 0.6, 2.4, cx, -282, '#5f8f4a', 0.62);
+      for (let x = x0 + 2; x < x1 - 1; x += 3.2) {
+        const shrub = solid(new THREE.IcosahedronGeometry(0.75, 0).translate(0, 1.15, 0), '#4f8a3c', { outlineWidth: 0.04 });
+        shrub.position.set(x, Y, -282 + ((fk % 2) - 0.5) * 0.8);
+        town.add(shrub);
+        const fl = solid(new THREE.IcosahedronGeometry(0.28, 0).translate(0, 0.85, 0), flowers[fk % flowers.length], { outlineWidth: 0 });
+        fl.position.set(x + 1.5, Y, -282);
+        town.add(fl);
+        fk++;
+      }
+      blocks.boxes.push({ x: cx, z: -282, hx: w / 2, hz: 1.5 });
+    }
+    // Placette et fontaine au centre de la promenade.
+    const FX = 372, FZ = -289.5;
+    town.add(new THREE.Mesh(new THREE.CircleGeometry(8, 24).rotateX(-Math.PI / 2).translate(FX, Y + 0.05, FZ), toon('#e7dcc6')));
+    town.add(new THREE.Mesh(new THREE.RingGeometry(6.2, 6.6, 24).rotateX(-Math.PI / 2).translate(FX, Y + 0.06, FZ), toon('#d6c9ae')));
+    ground(6, 8, FX, -280, '#e7dcc6');
+    solidAt(new THREE.CylinderGeometry(3.6, 3.8, 0.8, 16).translate(0, 0.4, 0), '#d9d4c8', FX, FZ, 0, 0.06);
+    town.add(new THREE.Mesh(new THREE.CircleGeometry(3.2, 16).rotateX(-Math.PI / 2).translate(FX, Y + 0.78, FZ), new THREE.MeshBasicMaterial({ color: '#7fd0ea' })));
+    solidAt(new THREE.CylinderGeometry(0.35, 0.5, 2.2, 8).translate(0, 1.1, 0), '#d9d4c8', FX, FZ, 0, 0.04);
+    solidAt(new THREE.CylinderGeometry(1.1, 0.4, 0.4, 10).translate(0, 2.3, 0), '#d9d4c8', FX, FZ, 0, 0.04);
+    solidAt(new THREE.IcosahedronGeometry(0.5, 0).scale(1, 1.6, 1).translate(0, 2.9, 0), '#bfe8f5', FX, FZ, 0, 0);
+    circles.push({ x: FX, z: FZ, r: 4 });
+    bench(FX - 6.2, FZ - 1, Math.PI / 2);
+    bench(FX + 6.2, FZ - 1, -Math.PI / 2);
+    for (const dx of [-9, 9]) {
+      solidAt(new THREE.CylinderGeometry(0.9, 0.7, 1, 8).translate(0, 0.5, 0), '#c8553d', FX + dx, FZ + 4, 0, 0.05);
+      solidAt(new THREE.IcosahedronGeometry(1.1, 0).scale(1, 1.3, 1).translate(0, 1.9, 0), '#4f8f4a', FX + dx, FZ + 4, 0, 0.06);
+      circles.push({ x: FX + dx, z: FZ + 4, r: 1 });
+    }
+    // Kiosque à glaces, son auvent rayé, un parasol et deux tables.
+    const KX = 336, KZ = -290;
+    solidAt(new THREE.BoxGeometry(4.4, 3, 3.2).translate(0, 1.5, 0), '#f6f1e7', KX, KZ, 0, 0.06);
+    for (let k = 0; k < 5; k++) solidAt(new THREE.BoxGeometry(0.88, 0.18, 2.2).rotateX(0.35).translate(-1.76 + k * 0.88, 3.1, 2.2), k % 2 ? '#ffffff' : '#e8404a', KX, KZ, 0, 0.02);
+    solidAt(new THREE.BoxGeometry(4.6, 0.3, 3.4).translate(0, 3.15, 0), '#e8404a', KX, KZ, 0, 0.04);
+    solidAt(new THREE.SphereGeometry(0.7, 8, 6).translate(0, 4, 0), '#ffc845', KX, KZ, 0, 0.04);
+    blocks.boxes.push({ x: KX, z: KZ, hx: 2.4, hz: 1.8 });
+    for (const [dx, dz] of [[-4.5, 4.5], [4.5, 4.5]]) {
+      solidAt(new THREE.CylinderGeometry(0.7, 0.7, 0.1, 10).translate(0, 1.05, 0), '#ffffff', KX + dx, KZ + dz, 0, 0.03);
+      solidAt(new THREE.CylinderGeometry(0.08, 0.08, 1, 4).translate(0, 0.5, 0), '#3c4a5c', KX + dx, KZ + dz, 0, 0);
+      circles.push({ x: KX + dx, z: KZ + dz, r: 0.9 });
+    }
+    solidAt(new THREE.ConeGeometry(2.6, 1, 8).translate(0, 3.6, 0), '#4d7cff', KX, KZ + 4.5, 0, 0.05);
+    solidAt(new THREE.CylinderGeometry(0.07, 0.07, 3.4, 4).translate(0, 1.7, 0), '#9aa3ad', KX, KZ + 4.5, 0, 0);
+    // Arceaux à vélos près de la capitainerie, et un panneau d'information.
+    for (let k = 0; k < 4; k++) solidAt(new THREE.TorusGeometry(0.55, 0.07, 4, 10, Math.PI).translate(0, 0.1, 0), '#9aa3ad', 318 + k * 1.3, -287, Math.PI / 2, 0);
+    solidAt(new THREE.BoxGeometry(2.6, 1.6, 0.2).translate(0, 2.2, 0), '#14275b', 296, -280.5, 0, 0.05);
+    solidAt(new THREE.BoxGeometry(2.2, 1.2, 0.05).translate(0, 2.2, 0.13), '#f6f1e7', 296, -280.5, 0, 0);
+    for (const dx of [-1.1, 1.1]) solidAt(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 4).translate(dx, 1.2, 0), '#3c4a5c', 296, -280.5, 0, 0);
+    circles.push({ x: 296, z: -280.5, r: 1.4 });
+    // Alignement d'arbres en grilles, le long de la route du parc.
+    for (const [k, x] of [322, 352, 392, 408, 424, 440].entries()) {
+      ground(2.4, 2.4, x, -293, '#3c4a5c', 0.07);
+      solidAt(new THREE.CylinderGeometry(0.28, 0.38, 3, 5).translate(0, 1.5, 0), PALETTE.wood, x, -293, 0, 0.05);
+      solidAt(new THREE.IcosahedronGeometry(2 + (k % 3) * 0.3, 0).scale(1, 1.15, 1).translate(0, 4.6, 0), k % 2 ? '#4f8a3c' : '#5f9e48', x, -293, k, 0.08);
+      circles.push({ x, z: -293, r: 0.8 });
+    }
+  }
+
   // --- Marina dans le bassin ouest : deux pontons à catways, des places, des bateaux amarrés.
   const wood = PALETTE.wood;
   const sailColors = ['#ffffff', '#ffc845', '#4d7cff', '#ff6a4d'];
