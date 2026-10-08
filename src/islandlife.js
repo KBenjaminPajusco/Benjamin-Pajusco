@@ -288,19 +288,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     }
   }
 
-  // --- Immeubles d'habitation au nord, tour de bureaux et entrepôts à l'est.
-  const flatCols = ['#f4dcd6', '#e7eef4', '#f2d7b6', '#e9f0dc'];
-  for (let k = 0; k < 5; k++) {
-    const x = 316 + k * 26, z = -446, h = 12 + R() * 8;
-    const g = new THREE.Group();
-    g.position.set(x, Y, z);
-    g.add(solid(new THREE.BoxGeometry(16, h, 10).translate(0, h / 2, 0), flatCols[k % 4], { outlineWidth: 0.15 }));
-    for (let f = 1; f < h / 3.2; f++) g.add(solid(new THREE.BoxGeometry(16.6, 0.3, 11).translate(0, f * 3.2, 0.4), '#ffffff', { outlineWidth: 0 }));
-    for (let w = -1; w <= 1; w++) for (let f = 0; f < h / 3.2 - 1; f++) g.add(solid(new THREE.BoxGeometry(2.2, 1.4, 0.2).translate(w * 5, 1.8 + f * 3.2, 5.05), '#4aa4de', { outlineWidth: 0 }));
-    g.add(solid(new THREE.BoxGeometry(16.4, 0.8, 10.4).translate(0, h + 0.4, 0), '#55657a', { outlineWidth: 0.06 }));
-    life.add(g);
-    block(x, z, 8.5, 5.5);
-  }
+  // --- Tour de bureaux et entrepôts à l'est (le nord est laissé aux campus).
   {
     const g = new THREE.Group();
     g.position.set(553, Y, -408);
