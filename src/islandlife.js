@@ -221,7 +221,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   spur(Math.PI * 0.72, [[322, -306], [306, -304]]); // capitainerie
   spur(Math.PI * 0.32, [[458, -307], [470, -303]]); // K-Challenge
   spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -362], [541, -372]]); // marché, entrepôts, tour
-  spur(-Math.PI * 0.36, [[464, -410], [470, -426], [462, -432], [430, -432], [360, -431], [318, -431]]); // campus (s'arrête devant IHT)
+  spur(-Math.PI * 0.12, [[468, -392], [466, -410], [470, -426], [462, -432], [430, -432], [360, -431], [318, -431]]); // campus (s'arrête devant IHT)
 
   // Voitures et vélos sur la boucle (voitures à droite, vélos sur le bord).
   const bike = (shirt) => {
