@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261008162204';
-import { makeWater } from './effects.js?v=20261008162204';
-import { person } from './characters.js?v=20261008162204';
-import { buildCafe } from './cafe.js?v=20261008162204';
-import { buildMatchRace } from './matchrace.js?v=20261008162204';
-import { buildPhare } from './phare.js?v=20261008162204';
-import { Boat } from './boat.js?v=20261008162204';
-import { buildDecor } from './decor.js?v=20261008162204';
-import { buildTown } from './town.js?v=20261008162204';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008162204';
-import { buildIslandLife } from './islandlife.js?v=20261008162204';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008162204';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008163005';
+import { makeWater } from './effects.js?v=20261008163005';
+import { person } from './characters.js?v=20261008163005';
+import { buildCafe } from './cafe.js?v=20261008163005';
+import { buildMatchRace } from './matchrace.js?v=20261008163005';
+import { buildPhare } from './phare.js?v=20261008163005';
+import { Boat } from './boat.js?v=20261008163005';
+import { buildDecor } from './decor.js?v=20261008163005';
+import { buildTown } from './town.js?v=20261008163005';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008163005';
+import { buildIslandLife } from './islandlife.js?v=20261008163005';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008163005';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -915,6 +915,12 @@ export function buildWorld(scene) {
       // Escalade : l'aire de blocs du parc.
       const C = life.climb;
       labels.push({ pos: new THREE.Vector3(C.x, 16, C.z), html: '🧗 Escalade', cls: 'label-place', zone: 'climb', hideInZone: true });
+      // La bouteille à la mer (easter egg) : sa fiche s'ouvre quand on s'en approche à pied.
+      if (life.bottle) {
+        const B = life.bottle;
+        zones.push({ id: 'bottle', x: B.x, z: B.z, r: 0, land: { x: B.x, z: B.z, r: 7 }, anchor: new THREE.Vector3(B.x, 5, B.z),
+          card: { kicker: 'Bouteille à la mer', title: 'Tu l’as trouvée !', sub: 'Un message pour les curieux qui vont jusqu’au bout de la plage', body: 'Si tu lis ceci, c’est que tu explores les choses jusqu’au bout : c’est exactement ce que j’aime faire. Écris-moi en me disant que tu as trouvé la bouteille, je réponds à toutes.', meta: 'benjamin.pajusco@gmail.com · linkedin.com/in/benjamin-pajusco-075b9b1b9', accent: '#3f9a6e' } });
+      }
       // Modding : le tremplin, l'arche et la monoplace qui vole au-dessus du parc.
       const M = life.mod;
       labels.push({ pos: new THREE.Vector3(M.x + 8, 10, M.z + 15), html: '🏎️ Modding', cls: 'label-place', zone: 'mod', hideInZone: true });

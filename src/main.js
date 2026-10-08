@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008162204';
-import { buildWorld, LAYOUT } from './world.js?v=20261008162204';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008162204';
-import { Walker } from './walker.js?v=20261008162204';
-import { Rib } from './rib.js?v=20261008162204';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008162204';
-import { STEPS, TEAM } from './cafe.js?v=20261008162204';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008162204';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008162204';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008162204';
-import { Race, COURSE } from './race.js?v=20261008162204';
-import { StaticMerger } from './optimize.js?v=20261008162204';
-import { solid, WIND } from './toon.js?v=20261008162204';
+import { Boat } from './boat.js?v=20261008163005';
+import { buildWorld, LAYOUT } from './world.js?v=20261008163005';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008163005';
+import { Walker } from './walker.js?v=20261008163005';
+import { Rib } from './rib.js?v=20261008163005';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008163005';
+import { STEPS, TEAM } from './cafe.js?v=20261008163005';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008163005';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008163005';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008163005';
+import { Race, COURSE } from './race.js?v=20261008163005';
+import { StaticMerger } from './optimize.js?v=20261008163005';
+import { solid, WIND } from './toon.js?v=20261008163005';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -251,6 +251,18 @@ const labels = world.labels.map((l) => {
     }
   }, 45);
 }
+// Easter egg : un mot pour celles et ceux qui ouvrent la console du navigateur.
+console.log(`%c
+        |\\
+        | \\
+        |  \\
+        |___\\
+   _____|_____
+   \\  B P   /
+~~~~\\_______/~~~~
+`, 'color:#ff6a4d;font-family:monospace;font-weight:700');
+console.log('%cTu inspectes le code ? On a sûrement des choses à se dire.', 'font:700 14px sans-serif;color:#1d2533');
+console.log('%cTout ce monde est procédural (Three.js, aucun modèle importé). Écris-moi : benjamin.pajusco@gmail.com · https://www.linkedin.com/in/benjamin-pajusco-075b9b1b9/', 'font:12px sans-serif;color:#55607a');
 const proj = new THREE.Vector3();
 const toScreen = (v) => {
   proj.copy(v).project(camera);

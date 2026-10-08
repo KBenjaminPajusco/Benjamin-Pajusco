@@ -29,7 +29,8 @@ const windCache = new Map();
 function toonWind(color, opts) {
   const key = color + JSON.stringify(opts);
   if (windCache.has(key)) return windCache.get(key);
-  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...opts });
+  const { flatShading, ...params } = opts;
+  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...params });
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uWind = WIND;
     sh.vertexShader = sh.vertexShader
@@ -44,7 +45,8 @@ function toonWind(color, opts) {
 export function toon(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!opts.map && cache.has(key)) return cache.get(key);
-  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...opts });
+  const { flatShading, ...params } = opts; // MeshToonMaterial n'a pas d'ombrage plat : l'option est ignorée
+  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...params });
   if (!opts.map) cache.set(key, m);
   return m;
 }

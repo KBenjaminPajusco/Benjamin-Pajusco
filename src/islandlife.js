@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, toon as toonMat, rng, PALETTE } from './toon.js?v=20261008162204';
-import { person } from './characters.js?v=20261008162204';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008162204';
+import { solid, toon as toonMat, rng, PALETTE } from './toon.js?v=20261008163005';
+import { person } from './characters.js?v=20261008163005';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261008163005';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
@@ -66,6 +66,7 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   const block = (x, z, hx, hz) => blocks.boxes.push({ x, z, hx, hz });
 
   // --- Plage au nord : sable qui descend dans l'eau, parasols, serviettes, baigneurs, vagues.
+  let BOTTLE = null;
   const n = poly.pts.length;
   const beachIdx = [];
   for (let i = 0; i < n; i++) { const p = poly.pts[i]; if (p.y < -462 && p.x > 300 && p.x < 480) beachIdx.push(i); }
@@ -105,6 +106,24 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
       }
       circles.push({ x: b.x + b.ox * 10, z: b.z + b.oz * 10, r: 5 });
     });
+    // Easter egg : une bouteille à la mer échouée sur le sable, à l'est de la plage (pas de nom, pas sur la carte).
+    {
+      const b = beach[Math.max(0, beach.length - 3)];
+      BOTTLE = { x: b.x + b.ox * 3.5, z: b.z + b.oz * 3.5 };
+      const g = new THREE.Group();
+      g.position.set(BOTTLE.x, 0.95, BOTTLE.z);
+      g.rotation.set(0, 0.7, 1.35); // couchée, le goulot vers le large
+      g.add(solid(new THREE.CylinderGeometry(0.42, 0.42, 1.5, 10), '#3f9a6e', { outlineWidth: 0.04 }));
+      g.add(solid(new THREE.CylinderGeometry(0.18, 0.36, 0.45, 10).translate(0, 0.97, 0), '#3f9a6e', { outlineWidth: 0.03 }));
+      g.add(solid(new THREE.CylinderGeometry(0.15, 0.15, 0.25, 8).translate(0, 1.3, 0), '#b08a5a', { outlineWidth: 0.02 }));
+      g.add(solid(new THREE.CylinderGeometry(0.22, 0.22, 0.9, 8).translate(0, 0.05, 0), '#f6efd9', { outlineWidth: 0 }));
+      life.add(g);
+      const glint = new THREE.Sprite(new THREE.SpriteMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false }));
+      glint.scale.setScalar(1.6);
+      glint.position.set(BOTTLE.x, 2, BOTTLE.z);
+      life.add(glint);
+      anim.push((dt, t) => { const k = Math.max(0, Math.sin(t * 1.7)) ** 8; glint.material.opacity = k; glint.scale.setScalar(0.8 + k * 1.2); });
+    }
     // Vagues : des rouleaux d'écume qui arrivent du large et meurent sur le sable.
     const foam = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false });
     for (let k = 0; k < 4; k++) {
@@ -558,5 +577,5 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
     blocks.circles.push({ x, z, r: 1.3 });
     planted++;
   }
-  return { roads: roadLines, park, climb: CLIMB, code: CODE, mod: MOD };
+  return { roads: roadLines, park, climb: CLIMB, code: CODE, mod: MOD, bottle: BOTTLE };
 }
