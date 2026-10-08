@@ -484,15 +484,17 @@ export function buildWorld(scene) {
       lawn([[-40, -25], [-8, -25.5], [24, -25], [28, -38], [25, -54], [4, -53], [-20, -48], [-40, -41]]); // côté rotonde et IHT
 
       // IHT : à gauche, à mi-chemin entre IRESTE et la rotonde, toit en voûtes blanches.
-      const HX = -31, HZ = -31;
-      flat(3, 5, HX + 2, HZ + 7, pave); // vers le bout de la route
-      c.add(solid(new THREE.BoxGeometry(13, 4.5, 10).translate(HX, 2.25, HZ), '#eef1f4', { outlineWidth: 0.14 }));
-      c.add(solid(new THREE.BoxGeometry(13.2, 1.1, 10.2).translate(HX, 2.6, HZ), glass, { outlineWidth: 0.05 }));
-      for (let k = 0; k < 3; k++) {
-        const vault = new THREE.CylinderGeometry(2.17, 2.17, 10, 10, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2).translate(HX - 4.33 + k * 4.33, 4.5, HZ);
+      // En long nord-sud, à gauche d'IRESTE, au bout de la route (qui s'arrête juste avant).
+      const HX = -26, HZ = -15, HL = 26;
+      lawn([[HX - 8, HZ - 15], [HX + 6, HZ - 16], [HX + 7, HZ + 15], [HX - 8, HZ + 16]]);
+      c.add(solid(new THREE.BoxGeometry(10, 4.5, HL).translate(HX, 2.25, HZ), '#eef1f4', { outlineWidth: 0.14 }));
+      c.add(solid(new THREE.BoxGeometry(10.2, 1.1, HL + 0.2).translate(HX, 2.6, HZ), glass, { outlineWidth: 0.05 }));
+      for (let k = 0; k < 6; k++) {
+        // Voûtes transversales, alignées sur toute la longueur.
+        const vault = new THREE.CylinderGeometry(2.17, 2.17, 10, 10, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).translate(HX, 4.5, HZ - HL / 2 + 2.17 + k * 4.33);
         c.add(solid(vault, '#fbfcfd', { outlineWidth: 0.07 }));
       }
-      plate('IHT', 3.4, HX, 3.6, HZ + 5.06);
+      plate('IHT', 3.4, HX, 3.6, HZ + HL / 2 + 0.06);
 
       // Parkings entre les bâtiments, comme sur la photo.
       parking(-6, 17, 5, 1);
@@ -508,7 +510,7 @@ export function buildWorld(scene) {
       // Collisions, étiquette et zone : la fiche s'ouvre au cœur du campus.
       blocks.boxes.push(
         { x: wx + IX, z: wz + IZ, hx: IL / 2 + 0.3, hz: 6.3 }, { x: wx + IX, z: wz + IZ + 7, hx: 3.2, hz: 1.3 },
-        { x: wx + HX, z: wz + HZ, hx: 6.7, hz: 5.2 }, { x: wx + rx + 18, z: wz + rz - 1, hx: 4.2, hz: 4.2 },
+        { x: wx + HX, z: wz + HZ, hx: 5.2, hz: HL / 2 + 0.2 }, { x: wx + rx + 18, z: wz + rz - 1, hx: 4.2, hz: 4.2 },
       );
       blocks.circles.push({ x: wx + rx - 3.5, z: wz + rz, r: 7.5 }, { x: wx + rx + 3.5, z: wz + rz, r: 7.5 });
       noTree(rx, rz, 13, 10);

@@ -100,6 +100,9 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => pointer.active && setPointer(e));
+// Glisser sur la scène ne doit jamais sélectionner le texte des étiquettes ou des fiches.
+canvas.addEventListener('mousedown', (e) => e.preventDefault());
+document.addEventListener('selectstart', (e) => { if (pointer.active) e.preventDefault(); });
 canvas.addEventListener('pointerup', () => { pointer.active = false; });
 canvas.addEventListener('pointercancel', () => { pointer.active = false; });
 function setPointer(e) {
