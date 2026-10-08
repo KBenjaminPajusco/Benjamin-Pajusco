@@ -105,8 +105,10 @@ export class StaticMerger {
     const pure = new Map();
     const isPure = (o) => {
       if (pure.has(o)) return pure.get(o);
-      const selfOk = o.isMesh ? !!o.userData.merged : (o.type === 'Group' || o.type === 'Object3D') && !this.excluded(o);
-      const ok = selfOk && o.children.every(isPure);
+      // Un repère vide (bout de foil, point d'ancrage…) n'est jamais retiré : seul le décor réellement cuit l'est.
+      const ok = o.isMesh
+        ? !!o.userData.merged && o.children.every(isPure)
+        : (o.type === 'Group' || o.type === 'Object3D') && !this.excluded(o) && o.children.length > 0 && o.children.every(isPure);
       pure.set(o, ok);
       return ok;
     };

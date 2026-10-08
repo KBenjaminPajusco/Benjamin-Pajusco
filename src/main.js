@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Boat } from './boat.js';
 import { buildWorld, LAYOUT } from './world.js';
-import { Wake, WindStreaks } from './effects.js';
+import { Wake, FoilSpray, WindStreaks } from './effects.js';
 import { Walker } from './walker.js';
 import { Rib } from './rib.js';
 import { applyDayNight, currentHour } from './daynight.js';
@@ -59,6 +59,8 @@ boat.pos.set(LAYOUT.start.x, LAYOUT.start.z);
 scene.add(boat.root);
 const wake = new Wake();
 scene.add(wake.points);
+const spray = new FoilSpray(IS_MOBILE ? 700 : 1400);
+scene.add(spray.points);
 const streaks = new WindStreaks();
 scene.add(streaks.group);
 const walker = new Walker();
@@ -67,7 +69,7 @@ const stream = new DataStream();
 scene.add(stream.mesh);
 const recorder = new Recorder();
 // Fusion du décor immobile après quelques secondes (gros gain de fluidité, surtout sur téléphone).
-const merger = new StaticMerger(scene, { exclude: [walker.root, stream.mesh, wake.points] });
+const merger = new StaticMerger(scene, { exclude: [walker.root, stream.mesh, wake.points, spray.points] });
 const telemetry = new TelemetryPanel($('#telemetry'), recorder);
 const mastTop = new THREE.Vector3();
 let mode = 'boat'; // 'boat' | 'walk'
@@ -751,7 +753,7 @@ const focus = new THREE.Vector3(INTRO_VIEW.x, 0, INTRO_VIEW.z);
 let zoneZoom = 1;
 camera.position.copy(focus).add(CAM_OFFSET);
 camera.lookAt(focus);
-const emitters = [];
+const emitters = [], aiEmitters = [];
 const clock = new THREE.Clock();
 const portrait = () => innerHeight > innerWidth;
 const camRight = new THREE.Vector3();
@@ -824,7 +826,17 @@ function tick(dt) {
   if (near) telemetry.render(t);
   if (activeZone?.live) renderLive();
   world.update(dt, t, boat);
-  wake.update(dt, boat.wakePoints(emitters), frozen ? 0 : boat.speed, boat.height > 0.6, innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * renderer.getPixelRatio());
+  const vpScale = innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * renderer.getPixelRatio();
+  wake.update(dt, boat.wakePoints(emitters), frozen ? 0 : boat.speed, boat.height > 0.6, vpScale);
+  // Gerbes des foils : le bateau du visiteur et les foilers de la régate.
+  if (boat.height > 0.6 && !boat.motor) spray.feed(dt, boat, emitters, boat.forward, frozen ? 0 : boat.speed);
+  else spray.feed(dt, boat, [], null, 0);
+  for (const a of race.ai) {
+    const ab = a.boat;
+    if (ab.height > 0.6 && Math.abs(ab.pos.x - focus.x) + Math.abs(ab.pos.y - focus.z) < 260) spray.feed(dt, ab, ab.wakePoints(aiEmitters), ab.forward, ab.speed);
+    else spray.feed(dt, ab, [], null, 0);
+  }
+  spray.update(frozen ? 0 : dt, vpScale);
   streaks.update(dt, focus);
 
   // Vue d'ensemble seulement à l'arrivée sur la page ; le mode « carte du monde » en navigation est désactivé.

@@ -205,6 +205,86 @@ export class Wake {
   }
 }
 
+// Gerbes des foils (« foil wash ») : là où le foil et le safran percent la surface, l'eau est projetée
+// vers le haut et vers l'arrière puis retombe. Plus le bateau va vite, plus la gerbe est haute et dense.
+export class FoilSpray {
+  constructor(count = 1400) {
+    this.count = count;
+    this.cursor = 0;
+    this.pos = new Float32Array(count * 3).fill(1e5);
+    this.vel = new Float32Array(count * 3);
+    this.life = new Float32Array(count);
+    this.size = new Float32Array(count);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('aLife', new THREE.BufferAttribute(this.life, 1));
+    g.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1));
+    this.geometry = g;
+    this.points = new THREE.Points(g, new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: { uScale: { value: 1 } },
+      vertexShader: /* glsl */`
+        attribute float aLife; attribute float aSize; varying float vLife; uniform float uScale;
+        void main() {
+          vLife = aLife;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * (0.6 + (1.0 - aLife) * 0.9) * uScale / -mv.z;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */`
+        varying float vLife;
+        void main() {
+          float r = length(gl_PointCoord - 0.5);
+          if (r > 0.5 || vLife <= 0.0) discard;
+          gl_FragColor = vec4(1.0, 1.0, 1.0, min(1.0, vLife * 1.6) * 0.85);
+        }`,
+    }));
+    this.points.frustumCulled = false;
+    this.acc = new WeakMap();
+  }
+  // Une source par bateau : points de perçage (monde), cap (vecteur avant x/z), vitesse en m/s.
+  feed(dt, key, sources, fwd, speed) {
+    if (speed < 9 || !sources.length) { this.acc.set(key, 0); return; }
+    const k = Math.min((speed - 9) / 12, 1.4); // 0 au décollage → gerbe pleine vers 40 nds
+    let acc = (this.acc.get(key) || 0) + dt * (30 + 110 * k);
+    while (acc > 1) {
+      acc -= 1;
+      for (const p of sources) {
+        const i = this.cursor;
+        this.cursor = (this.cursor + 1) % this.count;
+        const side = (Math.random() - 0.5) * 2;
+        this.pos[i * 3] = p.x + (Math.random() - 0.5) * 0.3;
+        this.pos[i * 3 + 1] = 0.15;
+        this.pos[i * 3 + 2] = p.z + (Math.random() - 0.5) * 0.3;
+        // Vers l'arrière (traînée), un peu sur les côtés, et vers le haut : une queue de coq.
+        const back = speed * (0.25 + Math.random() * 0.2);
+        this.vel[i * 3] = -fwd.x * back + fwd.y * side * 2.2;
+        this.vel[i * 3 + 1] = (2.5 + Math.random() * 3.5) * (0.6 + k);
+        this.vel[i * 3 + 2] = -fwd.y * back - fwd.x * side * 2.2;
+        this.life[i] = 1;
+        this.size[i] = 0.35 + Math.random() * 0.45;
+      }
+    }
+    this.acc.set(key, acc);
+  }
+  update(dt, viewportScale) {
+    this.points.material.uniforms.uScale.value = viewportScale;
+    for (let i = 0; i < this.count; i++) {
+      if (this.life[i] <= 0) continue;
+      this.life[i] -= dt * 1.1;
+      this.vel[i * 3 + 1] -= 9.8 * dt;
+      this.pos[i * 3] += this.vel[i * 3] * dt;
+      this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
+      this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
+      if (this.pos[i * 3 + 1] < 0) this.life[i] = 0; // retombée dans l'eau
+    }
+    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.aLife.needsUpdate = true;
+    this.geometry.attributes.aSize.needsUpdate = true;
+  }
+}
+
 // Traits de vent qui glissent sur l'eau dans le sens du vent (du nord vers le sud).
 export class WindStreaks {
   constructor(count = 46) {
