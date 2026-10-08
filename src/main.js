@@ -20,8 +20,9 @@ const canvas = $('#scene');
 // Téléphone (portrait, ou paysage avec écran tactile) : rendu allégé et interface compacte.
 const MOBILE_MQ = matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 950px)');
 const IS_MOBILE = MOBILE_MQ.matches;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_MOBILE, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, IS_MOBILE ? 1.25 : 2)); // plus léger sur téléphone
+// Anticrénelage partout : sur téléphone la résolution adaptative compense si les images ralentissent.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_MOBILE ? 1.5 : 2)); // un peu plus léger sur téléphone
 renderer.shadowMap.enabled = !IS_MOBILE; // pas d'ombres portées sur téléphone
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -953,7 +954,7 @@ const camRight = new THREE.Vector3();
 let simTime = 0;
 // Résolution adaptative (téléphone) : si les images arrivent trop lentement, on rend moins de pixels ;
 // si ça redevient fluide, on remonte doucement. Le décor reste net, seule la finesse varie.
-const PR_MAX = Math.min(devicePixelRatio, IS_MOBILE ? 1.25 : 2), PR_MIN = IS_MOBILE ? 0.7 : 1;
+const PR_MAX = Math.min(devicePixelRatio, IS_MOBILE ? 1.5 : 2), PR_MIN = IS_MOBILE ? 0.75 : 1;
 let frameEma = 1 / 60, prTimer = 0;
 function adaptResolution(raw) {
   if (document.hidden || raw > 0.25) return; // onglet en pause ou à-coup isolé : on ignore
@@ -1006,7 +1007,7 @@ function tick(dt) {
   const framing = mode === 'walk' ? activeZone?.frame : null;
   const walkTarget = framing
     ? THREE.MathUtils.clamp(Math.max(framing.r, Math.hypot(walker.pos.x - framing.x, walker.pos.y - framing.z) + 8) / 36.5, 0.82, 2.2) / 0.8
-    : activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? 3.4 : 1.2;
+    : activeZone ? (activeZone.walkZoom ?? 1) : world.inPort(walker.pos) ? (IS_MOBILE ? 1.4 : 3.4) : 1.2; // téléphone : on garde le marin lisible
   walkZoomS = THREE.MathUtils.damp(walkZoomS, walkTarget, 1.8, dt);
 
   // Lumière du jour : recalculée toutes les deux secondes à partir de l'heure locale.
