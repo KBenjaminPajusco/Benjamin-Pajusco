@@ -477,6 +477,8 @@ canvas#scene.frozen { filter: grayscale(1) contrast(.92) brightness(1.06); }
   .card .btn { margin-top: 8px; padding: 7px 12px; font-size: 13px; }
   .card .meta { margin-top: 6px; }
 
+  /* Pas de clavier sur téléphone : on retire la touche « E » des boutons. */
+  .action kbd { display: none; }
   /* Bouton d'action : toujours au-dessus du tiroir. */
   .action { bottom: calc(var(--sheet-h, 0px) + 12px); font-size: 14px; padding: 9px 16px; }
 
