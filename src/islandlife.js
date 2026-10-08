@@ -220,8 +220,8 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   spur(Math.PI, [[296, -347], [287, -342]]); // vers la vieille ville
   spur(Math.PI * 0.72, [[322, -306], [306, -304]]); // capitainerie
   spur(Math.PI * 0.32, [[458, -307], [470, -303]]); // K-Challenge
-  spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -372], [540, -396]]); // marché, entrepôts, tour
-  spur(-Math.PI * 0.36, [[436, -410], [440, -426], [432, -432], [410, -432], [360, -431], [318, -431]]); // campus (s'arrête devant IHT)
+  spur(Math.PI * 0.06, [[486, -326], [500, -317], [540, -317], [546, -340], [542, -362], [541, -372]]); // marché, entrepôts, tour
+  spur(-Math.PI * 0.36, [[464, -410], [470, -426], [462, -432], [430, -432], [360, -431], [318, -431]]); // campus (s'arrête devant IHT)
 
   // Voitures et vélos sur la boucle (voitures à droite, vélos sur le bord).
   const bike = (shirt) => {
@@ -291,12 +291,12 @@ export function buildIslandLife({ root, anim, blocks, circles, poly, top, S, hil
   // --- Tour de bureaux et entrepôts à l'est (le nord est laissé aux campus).
   {
     const g = new THREE.Group();
-    g.position.set(553, Y, -408);
+    g.position.set(562, Y, -370);
     g.add(solid(new THREE.BoxGeometry(12, 34, 12).translate(0, 17, 0), '#3c4a5c', { outlineWidth: 0.15 }));
     for (let f = 1; f < 11; f++) g.add(solid(new THREE.BoxGeometry(12.4, 0.5, 12.4).translate(0, f * 3.1, 0), '#4aa4de', { outlineWidth: 0 }));
     g.add(solid(new THREE.BoxGeometry(6, 3, 6).translate(0, 35.5, 0), '#9aa3ad', { outlineWidth: 0.08 }));
     life.add(g);
-    block(553, -408, 6.5, 6.5);
+    block(562, -370, 6.5, 6.5);
   }
   for (let k = 0; k < 2; k++) {
     const x = 560, z = -340 + k * 26;

@@ -528,7 +528,8 @@ export function buildWorld(scene) {
       c.position.set(lx, top, lz);
       g.add(c);
       const wx = x + lx, wz = z + lz;
-      const { noTree, plate, flat, parking, lawn, gable } = campusKit(c, wx, wz);
+      const { noTree, plate, flat, parking, lawn: lawnAt, gable } = campusKit(c, wx, wz);
+      const lawn = (pts) => lawnAt(pts, '#8fc46d', 0.046);
       const concrete = '#e6e2d8', parapet = '#8d96a3', windows = '#3d5266', pave = '#d9d4c8';
       lawn([[-15, -13], [4, -14], [19, -13], [21, 0], [17, 10], [2, 11], [-14, 10], [-17, -2]]);
       lawn([[-14, -26], [10, -26], [24, -27], [25, -38], [8, -42], [-12, -40]]);
@@ -578,8 +579,8 @@ export function buildWorld(scene) {
       const wx = x + gx, wz = z + gz;
       const { noTree, plate, flat, parking, lawn } = campusKit(c, wx, wz);
       const brick = '#a8483a', brickDark = '#93392d', snow = '#f6fbff', stone = '#e9dccb';
-      lawn([[-21, -16], [2, -17], [17, -16], [20, -9], [12, 2], [5, 9], [-6, 11], [-21, 10], [-23, -3]], snow);
-      lawn([[-20, -26], [6, -26], [22, -26], [23, -40], [12, -50], [-10, -50], [-21, -42]], snow);
+      lawn([[-21, -16], [2, -17], [17, -16], [20, -9], [12, 2], [5, 9], [-6, 11], [-21, 10], [-23, -3]], snow, 0.052);
+      lawn([[-20, -26], [6, -26], [22, -26], [23, -40], [12, -50], [-10, -50], [-21, -42]], snow, 0.052);
       noTree(-4, -3, 18, 12);
       // Aile ouest d'origine : brique, bandeaux de pierre, toit enneigé.
       c.add(solid(new THREE.BoxGeometry(7, 8, 20).translate(-15, 4, -5), brick, { outlineWidth: 0.16 }));
@@ -608,7 +609,7 @@ export function buildWorld(scene) {
         c.add(solid(new THREE.IcosahedronGeometry(2.2 + k * 0.3, 0).translate(tx, 4, tz), k === 1 ? '#e85d2a' : '#d7372b', { outlineWidth: 0.12 }));
       });
       const f = flag('CA', 9);
-      f.position.set(2, 0, 8);
+      f.position.set(-21, 0, -6);
       c.add(f);
       f.userData.dynamic = true;
       anim.push((dt, t) => { f.userData.cloth.rotation.y = Math.sin(t * 3) * 0.3; });
@@ -750,7 +751,7 @@ export function buildWorld(scene) {
     const S = 2.4; // personnages agrandis pour rester lisibles depuis la caméra haute
 
     // Campus : les écoles, au nord du quai.
-    buildCampus(380, -412, qTop, { polytech: [-48, 0], ronarch: [-8, 0], guelph: [32, 2] });
+    buildCampus(380, -412, qTop, { polytech: [-48, 0], ronarch: [4, 0], guelph: [54, 2] });
     labels.push({ pos: new THREE.Vector3(380, 4, -392), html: '🎓 Formation', cls: 'label-place' });
 
     // K-Challenge : mon poste actuel, au bord de l'eau, avec un foiler amarré devant.
@@ -805,7 +806,7 @@ export function buildWorld(scene) {
     cafeLoop = buildCafe({ root, anim, labels, blocks, qTop, S });
     zones.push({ id: 'agents', x: 383, z: -284, r: 0, land: { x: 383, z: -284, r: 44 }, anchor: new THREE.Vector3(355, 21, -316), zoom: 1.05, look: { x: 360, z: -284 }, live: true, walkZoom: 1.45, cardSide: true, card: { ...AI_FLOW, accent: '#3ec7c2' } });
 
-    shiftSince(openSpaceStart, 113, -108);
+    shiftSince(openSpaceStart, 139, -108);
 
     // La ville : quartier, route et voitures, passants, capitainerie, marina.
     buildTown({ root, anim, labels, circles, blocks, land, qTop, S });
