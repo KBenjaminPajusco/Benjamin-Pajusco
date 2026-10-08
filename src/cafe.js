@@ -48,13 +48,14 @@ function desk(g, { wide = false } = {}) {
 }
 
 // Portable ouvert : assez bas pour qu'on voie l'agent assis derrière, même depuis la caméra haute.
+// Les écrans sont tournés vers la personne assise (côté -z), qui fait face à la caméra.
 function laptop(g) {
   g.add(solid(new THREE.BoxGeometry(1.8, 0.1, 1.2).translate(0, 2.06, -0.1), '#55607a', { outlineWidth: 0.03 }));
-  g.add(solid(new THREE.BoxGeometry(1.8, 1.1, 0.1).rotateX(-0.25).translate(0, 2.6, -0.65), '#55607a', { outlineWidth: 0.03 }));
+  g.add(solid(new THREE.BoxGeometry(1.8, 1.1, 0.1).rotateX(0.25).translate(0, 2.6, 0.45), '#55607a', { outlineWidth: 0.03 }));
   const mat = new THREE.MeshBasicMaterial({ color: '#16304d' });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), mat);
-  screen.position.set(0, 2.62, -0.58);
-  screen.rotation.x = -0.25;
+  screen.position.set(0, 2.62, 0.38);
+  screen.rotation.set(0.25, Math.PI, 0);
   g.add(screen);
   return mat;
 }
@@ -64,7 +65,8 @@ function monitor(g, x = 0, w = 2.4) {
   g.add(solid(new THREE.BoxGeometry(w, 1.5, 0.16).translate(x, 3.3, -0.6), '#1d2533', { outlineWidth: 0.05 }));
   const mat = new THREE.MeshBasicMaterial({ color: '#16304d' });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.25, 1.25), mat);
-  screen.position.set(x, 3.3, -0.51);
+  screen.position.set(x, 3.3, -0.69);
+  screen.rotation.y = Math.PI;
   g.add(screen);
   return mat;
 }
@@ -177,14 +179,7 @@ export function buildCafe({ root, anim, labels, blocks, qTop, S }) {
       if (me) { ud.screens.push(monitor(g, -1.4, 2.2), monitor(g, 1.4, 2.2)); }
       else if (step.key === 'report') {
         // Le collègue qui râle : un portable et un point d'exclamation rouge.
-        g.add(solid(new THREE.BoxGeometry(1.8, 0.1, 1.2).translate(0, 2.06, -0.1), '#55607a', { outlineWidth: 0.03 }));
-        g.add(solid(new THREE.BoxGeometry(1.8, 1.1, 0.1).rotateX(-0.25).translate(0, 2.6, -0.65), '#55607a', { outlineWidth: 0.03 }));
-        const mat = new THREE.MeshBasicMaterial({ color: '#16304d' });
-        const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), mat);
-        screen.position.set(0, 2.62, -0.58);
-        screen.rotation.x = -0.25;
-        g.add(screen);
-        ud.screens.push(mat);
+        ud.screens.push(laptop(g));
         ud.activeColor = RED;
       } else ud.screens.push(island ? laptop(g) : monitor(g));
       const who = me ? seated(g, { shirt: '#ff6a4d', pants: '#26324a' }, S)
