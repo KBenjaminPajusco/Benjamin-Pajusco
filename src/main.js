@@ -1,16 +1,16 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js';
-import { buildWorld, LAYOUT } from './world.js';
-import { Wake, FoilSpray, WindStreaks } from './effects.js';
-import { Walker } from './walker.js';
-import { Rib } from './rib.js';
-import { applyDayNight, currentHour } from './daynight.js';
-import { STEPS, TEAM } from './cafe.js';
-import { renderGeoMap, renderRegattaMap } from './geomap.js';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js';
-import { Race, COURSE } from './race.js';
-import { StaticMerger } from './optimize.js';
+import { Boat } from './boat.js?v=20261008114723';
+import { buildWorld, LAYOUT } from './world.js?v=20261008114723';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008114723';
+import { Walker } from './walker.js?v=20261008114723';
+import { Rib } from './rib.js?v=20261008114723';
+import { applyDayNight, currentHour } from './daynight.js?v=20261008114723';
+import { STEPS, TEAM } from './cafe.js?v=20261008114723';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008114723';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008114723';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008114723';
+import { Race, COURSE } from './race.js?v=20261008114723';
+import { StaticMerger } from './optimize.js?v=20261008114723';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));

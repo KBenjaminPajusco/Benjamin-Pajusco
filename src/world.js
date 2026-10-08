@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js';
-import { makeWater } from './effects.js';
-import { person } from './characters.js';
-import { buildCafe } from './cafe.js';
-import { buildMatchRace } from './matchrace.js';
-import { buildPhare } from './phare.js';
-import { Boat } from './boat.js';
-import { buildDecor } from './decor.js';
-import { buildTown } from './town.js';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js';
-import { buildIslandLife } from './islandlife.js';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261008114723';
+import { makeWater } from './effects.js?v=20261008114723';
+import { person } from './characters.js?v=20261008114723';
+import { buildCafe } from './cafe.js?v=20261008114723';
+import { buildMatchRace } from './matchrace.js?v=20261008114723';
+import { buildPhare } from './phare.js?v=20261008114723';
+import { Boat } from './boat.js?v=20261008114723';
+import { buildDecor } from './decor.js?v=20261008114723';
+import { buildTown } from './town.js?v=20261008114723';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261008114723';
+import { buildIslandLife } from './islandlife.js?v=20261008114723';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261008114723';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
