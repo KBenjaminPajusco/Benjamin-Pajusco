@@ -108,6 +108,19 @@
       <div class="sv-graph"></div>
     </div>
   </section>
+  <section id="race-report" class="overlay team-overlay" hidden>
+    <div class="team-panel perf-panel">
+      <button class="close" aria-label="Fermer">×</button>
+      <p class="team-tag">Rapport de perf · régate</p>
+      <h2 class="rr-title"></h2>
+      <p class="team-lead rr-sub"></p>
+      <div class="rr-grid">
+        <canvas class="rr-map" width="420" height="520"></canvas>
+        <div class="rr-table-wrap"><table class="rr-table"></table></div>
+      </div>
+      <p class="rr-note">Vitesses en nœuds. TWA : angle moyen au vent réel sur chaque bord (près : jusqu’à la bouée au vent, portant : retour à la ligne).</p>
+    </div>
+  </section>
   <button id="card-tab" class="card-tab" hidden aria-label="Rouvrir la fiche">ⓘ</button>
   <div id="stamp" hidden><svg class="geo" aria-hidden="true"></svg><div class="place"></div><div class="coords"></div><div class="dist"></div></div>
 

@@ -137,6 +137,7 @@ export class Race {
         this.state = 'racing';
         this.clock = 0;
         this.committee.userData.flag.visible = false;
+        this.initStats(playerBoat);
         this.events.push({ kind: 'start', text: 'Départ !' });
         if (this.player) {
           this.player.phase = 'pre';
@@ -151,7 +152,9 @@ export class Race {
       if (all.every((c) => c.finished !== null) || this.clock > 150) {
         this.state = 'results';
         this.timer = 10;
+        this.buildReport();
         this.events.push({ kind: 'results', text: '' });
+        if (this.report.rows.some((r) => r.human)) this.events.push({ kind: 'report', text: '' });
       }
     } else if (this.state === 'results') {
       this.timer -= dt;
@@ -163,6 +166,8 @@ export class Race {
         this.committee.userData.flag.visible = true;
       }
     }
+
+    if (this.state === 'racing') this.recordStats(dt, playerBoat);
 
     // Pilotage des bateaux IA.
     const others = this.competitors();
@@ -306,9 +311,58 @@ export class Race {
     }
   }
 
+  // --- Rapport de perf : trace, vitesses et TWA moyens par bord, manœuvres, pour chaque bateau.
+  boatOf(c, playerBoat) { return c.human ? playerBoat : c.boat; }
+
+  initStats(playerBoat) {
+    this.lastPlayerBoat = playerBoat;
+    const leg = () => ({ t: 0, spd: 0, twa: 0 });
+    for (const c of this.competitors()) {
+      const b = this.boatOf(c, playerBoat);
+      c.stats = { track: [[b.pos.x, b.pos.y]], time: 0, spd: 0, dist: 0, beat: leg(), run: leg(), tacks: 0, gybes: 0, side: b.side, last: b.pos.clone(), sample: 0 };
+    }
+  }
+
+  recordStats(dt, playerBoat) {
+    for (const c of this.competitors()) {
+      const s = c.stats, b = this.boatOf(c, playerBoat);
+      if (!s || c.finished !== null) continue;
+      s.time += dt;
+      s.spd += b.speed * dt;
+      s.dist += Math.hypot(b.pos.x - s.last.x, b.pos.y - s.last.y);
+      s.last.copy(b.pos);
+      const leg = c.phase === 'beat' || c.phase === 'round' ? s.beat : c.phase === 'run' ? s.run : null;
+      if (leg) { leg.t += dt; leg.spd += b.speed * dt; leg.twa += b.twa * dt; }
+      // Changement de bord : nez dans le vent (cap vers le nord) = virement, sinon empannage.
+      if (b.side !== s.side) {
+        if (Math.abs(b.heading) > Math.PI / 2) s.tacks++; else s.gybes++;
+        s.side = b.side;
+      }
+      s.sample += dt;
+      if (s.sample > 0.4) { s.sample = 0; s.track.push([b.pos.x, b.pos.y]); }
+    }
+  }
+
+  buildReport() {
+    const KN = 1.944, DEG = 180 / Math.PI;
+    const legOut = (l) => (l.t > 1 ? { v: (l.spd / l.t) * KN, twa: (l.twa / l.t) * DEG } : null);
+    const order = this.standings(this.lastPlayerBoat);
+    this.report = {
+      at: new Date(),
+      rows: order.filter((c) => c.stats).map((c, i) => ({
+        rank: i + 1, name: c.human ? 'Toi' : c.name, human: !!c.human, color: c.human ? '#ff6a4d' : c.accent,
+        finished: c.finished, time: c.finished ?? c.stats.time, dist: c.stats.dist,
+        v: c.stats.time > 0 ? (c.stats.spd / c.stats.time) * KN : 0,
+        beat: legOut(c.stats.beat), run: legOut(c.stats.run), tacks: c.stats.tacks, gybes: c.stats.gybes, track: c.stats.track,
+      })),
+    };
+  }
+
   finish(c) {
     if (c.finished !== null) return;
     c.finished = this.clock;
+    const fb = this.boatOf(c, this.lastPlayerBoat);
+    if (c.stats && fb) c.stats.track.push([fb.pos.x, fb.pos.y]);
     this.results.push(c);
     c.phase = 'done';
     if (c.human) this.events.push({ kind: 'start', text: `Arrivée ! ${this.results.length}${this.results.length === 1 ? 'er' : 'e'} sur ${this.competitors().length}.` });

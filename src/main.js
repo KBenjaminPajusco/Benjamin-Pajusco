@@ -725,10 +725,66 @@ function showToast(text, kind = 'info') {
   toastTimer = setTimeout(() => { toast.hidden = true; }, 4200);
 }
 const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+// --- Rapport de perf d'après course : traces, vitesses et TWA moyens par bord, manœuvres.
+const reportEl = $('#race-report');
+reportEl.querySelector('.close').addEventListener('click', () => { reportEl.hidden = true; });
+reportEl.addEventListener('click', (e) => { if (e.target === reportEl) reportEl.hidden = true; });
+function openReport() {
+  const rep = race.report;
+  if (!rep) return;
+  const me = rep.rows.find((r) => r.human);
+  reportEl.querySelector('.rr-title').textContent = me ? `${me.rank}${me.rank === 1 ? 'er' : 'e'} sur ${rep.rows.length}${me.finished !== null ? ` en ${fmtTime(me.time)}` : ' · non classé'}` : 'Régate';
+  reportEl.querySelector('.rr-sub').textContent = `Parcours au vent / sous le vent · vent du nord · ${rep.at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  const f1 = (v) => (v == null ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }));
+  const f0 = (v) => (v == null ? '—' : `${Math.round(v)}°`);
+  reportEl.querySelector('.rr-table').innerHTML = `<thead><tr><th></th><th>Bateau</th><th>Temps</th><th>Dist.</th><th>V moy</th><th>V près</th><th>TWA près</th><th>V portant</th><th>TWA portant</th><th>Virements</th><th>Empannages</th></tr></thead><tbody>${
+    rep.rows.map((r) => `<tr class="${r.human ? 'me' : ''}"><td>${r.rank}</td><td><i style="background:${r.color}"></i>${r.name}</td><td>${r.finished !== null ? fmtTime(r.time) : 'DNF'}</td><td>${Math.round(r.dist)} m</td><td>${f1(r.v)}</td><td>${f1(r.beat?.v)}</td><td>${f0(r.beat?.twa)}</td><td>${f1(r.run?.v)}</td><td>${f0(r.run?.twa)}</td><td>${r.tacks}</td><td>${r.gybes}</td></tr>`).join('')
+  }</tbody>`;
+  reportEl.hidden = false;
+  drawReportMap(reportEl.querySelector('.rr-map'), rep);
+}
+function drawReportMap(cv, rep) {
+  const { line, mark } = COURSE;
+  const dpr = Math.min(devicePixelRatio, 2), W = cv.clientWidth || 420, H = cv.clientHeight || 520;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  let x0 = Math.min(line.x0, mark.x) - 20, x1 = Math.max(line.x1, mark.x) + 20, z0 = mark.z - 20, z1 = line.z + 30;
+  for (const r of rep.rows) for (const [x, z] of r.track) { x0 = Math.min(x0, x - 8); x1 = Math.max(x1, x + 8); z0 = Math.min(z0, z - 8); z1 = Math.max(z1, z + 8); }
+  const s = Math.min(W / (x1 - x0), H / (z1 - z0));
+  const X = (x) => W / 2 + (x - (x0 + x1) / 2) * s, Y = (z) => H / 2 + (z - (z0 + z1) / 2) * s;
+  ctx.fillStyle = '#0b1a2e'; ctx.fillRect(0, 0, W, H);
+  // Quadrillage de 20 m, comme un fond de carte d'analyse.
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  for (let x = Math.ceil(x0 / 20) * 20; x < x1; x += 20) { ctx.beginPath(); ctx.moveTo(X(x), 0); ctx.lineTo(X(x), H); ctx.stroke(); }
+  for (let z = Math.ceil(z0 / 20) * 20; z < z1; z += 20) { ctx.beginPath(); ctx.moveTo(0, Y(z)); ctx.lineTo(W, Y(z)); ctx.stroke(); }
+  // Ligne de départ / arrivée et marques.
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(X(line.x0), Y(line.z)); ctx.lineTo(X(line.x1), Y(line.z)); ctx.stroke(); ctx.setLineDash([]);
+  const dot = (x, z, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(X(x), Y(z), r, 0, 7); ctx.fill(); };
+  dot(line.x0, line.z, 4, '#ff9f1c'); dot(mark.x, mark.z, 5, '#ffc845');
+  ctx.fillStyle = '#e8eef5'; ctx.fillRect(X(line.x1) - 3, Y(line.z) - 6, 6, 12);
+  // Flèche de vent (du nord).
+  ctx.strokeStyle = '#7fd6ff'; ctx.fillStyle = '#7fd6ff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(W - 22, 14); ctx.lineTo(W - 22, 40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W - 27, 34); ctx.lineTo(W - 22, 42); ctx.lineTo(W - 17, 34); ctx.fill();
+  ctx.font = '600 10px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('VENT', W - 22, 54);
+  // Les traces : le visiteur par-dessus, plus épais.
+  for (const r of [...rep.rows].sort((a, b) => a.human - b.human)) {
+    ctx.strokeStyle = r.color; ctx.lineWidth = r.human ? 3 : 2; ctx.lineJoin = ctx.lineCap = 'round';
+    ctx.globalAlpha = r.human ? 1 : 0.85;
+    ctx.beginPath(); r.track.forEach(([x, z], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(x), Y(z))); ctx.stroke();
+    const [ex, ez] = r.track[r.track.length - 1];
+    dot(ex, ez, 3.5, r.color);
+    ctx.globalAlpha = 1;
+  }
+}
 function updateRaceUi() {
   while (race.events.length) {
     const e = race.events.shift();
-    if (e.kind !== 'results') showToast(e.text, e.kind);
+    if (e.kind === 'report') setTimeout(openReport, 1200);
+    else if (e.kind !== 'results') showToast(e.text, e.kind);
   }
   if (!raceBtn.hidden) {
     raceBtn.disabled = race.state === 'racing' || race.playerIn;
