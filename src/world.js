@@ -417,10 +417,11 @@ export function buildWorld(scene) {
       return { noTree, plate, flat, parking, lawn, gable };
     };
     // Une école : étiquette, zone (fiche + carte) et rayon de la zone à pied.
-    const school = (e, cx, cz, r, ax, ay, az) => {
+    // frame : centre et rayon de l'emprise du campus (bâtiments, parkings, terrains), pour le cadrage à pied.
+    const school = (e, cx, cz, r, ax, ay, az, frame) => {
       labels.push({ pos: new THREE.Vector3(ax, ay + 1.5, az), html: e.school, cls: 'label-place', zone: e.id, hideInZone: true });
       zones.push({
-        id: e.id, x: cx, z: cz, r: 0, land: { x: cx, z: cz, r }, frame: { x: cx, z: cz, r: r * 0.85 },
+        id: e.id, x: cx, z: cz, r: 0, land: { x: cx, z: cz, r }, frame,
         anchor: new THREE.Vector3(ax, ay, az), geo: { ...e.geo, place: e.place, flag: e.flag },
         card: { brand: e.brand, logo: e.logo, kicker: e.dates, title: e.school, sub: e.degree, tags: e.tags, body: e.body, meta: e.place, accent: e.brand.color },
       });
@@ -518,7 +519,7 @@ export function buildWorld(scene) {
       );
       blocks.circles.push({ x: wx + rx - 3.5, z: wz + rz, r: 7.5 }, { x: wx + rx + 3.5, z: wz + rz, r: 7.5 });
       noTree(rx, rz, 13, 10);
-      school(poly, wx - 8, wz - 4, 34, wx + IX, top + 19, wz + IZ);
+      school(poly, wx - 8, wz - 4, 34, wx + IX, top + 19, wz + IZ, { x: wx - 3, z: wz - 14, r: 36 });
     }
 
     // Lycée Amiral Ronarc'h (Brest), d'après la vue aérienne : un bloc à patios, une longue barre plus haute à l'est,
@@ -566,7 +567,7 @@ export function buildWorld(scene) {
         { x: wx - 4, z: wz - 8, hx: 8.2, hz: 6.7 }, { x: wx + 8, z: wz - 5, hx: 3.2, hz: 9.7 },
         { x: wx + 14.7, z: wz + 2, hx: 3.7, hz: 5.2 }, { x: wx - 7, z: wz + 6.5, hx: 3.2, hz: 2.7 },
       );
-      school(lycee, wx + 2, wz - 3, 26, wx - 4, top + 17, wz - 8);
+      school(lycee, wx + 2, wz - 3, 26, wx - 4, top + 17, wz - 8, { x: wx + 1, z: wz - 12, r: 26 });
     }
 
     // Guelph Collegiate Vocational Institute (Ontario), d'après la vue aérienne : la longue aile d'origine en brique
@@ -626,7 +627,7 @@ export function buildWorld(scene) {
         { x: wx - 15, z: wz - 5, hx: 3.7, hz: 10.2 }, { x: wx - 15, z: wz + 7, hx: 2.4, hz: 2.4 }, { x: wx - 6.5, z: wz - 3, hx: 4.7, hz: 4.2 },
         { x: wx + 5.5, z: wz - 8, hx: 6.7, hz: 6.7 }, { x: wx - 5, z: wz + 6, hx: 4.2, hz: 4.2 },
       );
-      school(guelph, wx - 4, wz - 3, 26, wx - 6.5, top + 17, wz - 3);
+      school(guelph, wx - 4, wz - 3, 26, wx - 6.5, top + 17, wz - 3, { x: wx, z: wz - 21, r: 32 });
     }
 
   }
