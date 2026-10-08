@@ -126,6 +126,7 @@ export class Race {
 
   update(dt, playerBoat) {
     this.clock += dt;
+    this.wall = (this.wall ?? 0) + dt; // temps continu (le chrono de course repart de 0 au départ)
     const { line, mark, axis } = COURSE;
     if (this.state === 'idle') {
       this.timer -= dt;
@@ -139,9 +140,9 @@ export class Race {
         this.events.push({ kind: 'start', text: 'Départ !' });
         if (this.player) {
           this.player.phase = 'pre';
-          if (playerBoat.pos.y < line.z && playerBoat.pos.x > line.x0 && playerBoat.pos.x < line.x1) {
+          if (playerBoat.pos.y < line.z && playerBoat.pos.x > line.x0 - 40 && playerBoat.pos.x < line.x1 + 40) {
             this.player.ocs = true;
-            this.events.push({ kind: 'warn', text: 'Départ anticipé ! Repasse sous la ligne puis repars.' });
+            this.events.push({ kind: 'warn', text: 'OCS ! Départ anticipé (règle 29.1) : repasse entièrement sous la ligne, puis reprends le départ.' });
           }
         }
       }
@@ -234,7 +235,7 @@ export class Race {
           // Message une seule fois par manœuvre, et seulement en course.
           if (d < 14 && o.human && this.state === 'racing' && this.clock - (a.lastYield || -99) > 8) {
             a.lastYield = this.clock;
-            this.events.push({ kind: 'rule', text: `${a.name} s’écarte : tu avais la priorité.` });
+            this.events.push({ kind: 'rule', text: `${a.name} s’écarte : tu avais la priorité (règle ${this.ruleNo(b, ob)}).` });
           }
         }
       }
@@ -266,9 +267,23 @@ export class Race {
               this.events.push({ kind: 'warn', text: this.ruleText(human.boat, other) });
             } else {
               other.speed *= 0.3;
-              this.events.push({ kind: 'rule', text: 'L’autre bateau devait s’écarter : pénalité pour lui.' });
+              this.events.push({ kind: 'rule', text: `Règle ${this.ruleNo(other, human.boat)} : l’autre bateau devait s’écarter, pénalité pour lui.` });
             }
           }
+        }
+      }
+    }
+
+    // Règle 31 : toucher une marque du parcours (bouée viseur, comité, bouée au vent) est une pénalité.
+    if (this.player && (this.state === 'racing' || this.state === 'countdown') && this.player.finished === null) {
+      const b = playerBoat;
+      // Rayon de contact = obstacle + demi-coque (5) + une petite marge.
+      const marks = [{ x: line.x0, z: line.z, r: 7.6, name: 'la bouée viseur' }, { x: line.x1, z: line.z, r: 10.6, name: 'le bateau comité' }, { x: mark.x, z: mark.z, r: 8.2, name: 'la bouée au vent' }];
+      for (const m of marks) {
+        if (Math.hypot(b.pos.x - m.x, b.pos.y - m.z) < m.r && this.wall - (this.lastMark ?? -9) > 4) {
+          this.lastMark = this.wall;
+          b.speed *= 0.3;
+          this.events.push({ kind: 'warn', text: `Règle 31 : tu as touché ${m.name}. Pénalité !` });
         }
       }
     }
@@ -278,7 +293,7 @@ export class Race {
       const pl = this.player, b = playerBoat;
       const inLine = b.pos.x > line.x0 && b.pos.x < line.x1;
       if (pl.ocs) {
-        if (b.pos.y > line.z + 2) { pl.ocs = false; this.events.push({ kind: 'info', text: 'Bien, tu peux repartir.' }); }
+        if (b.pos.y > line.z + 2) { pl.ocs = false; this.events.push({ kind: 'info', text: 'Bien, tu es repassé sous la ligne : reprends le départ.' }); }
       } else if (pl.phase === 'pre' && b.pos.y < line.z && inLine) {
         pl.phase = 'beat';
         this.events.push({ kind: 'info', text: 'Parti ! Monte au près jusqu’à la bouée jaune au nord.' });
@@ -310,11 +325,18 @@ export class Race {
     return along > 0; // l'autre est devant : je suis en route libre derrière, je m'écarte
   }
 
-  ruleText(me, other) {
-    if (me.side !== other.side) return 'Bâbord amure : tu devais t’écarter du bateau tribord amure. Pénalité !';
+  // Numéro de la règle qui s'applique entre deux bateaux (10 : amures opposées, 11 : engagés, 12 : non engagés).
+  ruleNo(me, other) {
+    if (me.side !== other.side) return 10;
     const rx = other.pos.x - me.pos.x, rz = other.pos.y - me.pos.y, fwd = me.forward;
-    if (Math.abs(rx * fwd.x + rz * fwd.y) < 11) return 'Au vent : tu devais t’écarter du bateau sous le vent. Pénalité !';
-    return 'Route libre derrière : tu devais t’écarter du bateau devant. Pénalité !';
+    return Math.abs(rx * fwd.x + rz * fwd.y) < 11 ? 11 : 12;
+  }
+
+  ruleText(me, other) {
+    const n = this.ruleNo(me, other);
+    if (n === 10) return 'Règle 10 — bâbord amure : tu devais t’écarter du bateau tribord amure. Pénalité !';
+    if (n === 11) return 'Règle 11 — au vent : tu devais t’écarter du bateau sous le vent. Pénalité !';
+    return 'Règle 12 — en route libre derrière : tu devais t’écarter du bateau devant. Pénalité !';
   }
 
   // Classement en cours (arrivés, puis progression sur le parcours).

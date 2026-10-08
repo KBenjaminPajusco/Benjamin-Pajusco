@@ -48,7 +48,7 @@ const race = new Race(scene, world);
     id: 'regate', x: cx, z: line.z + 18, r: 46, zoom: 1.4, anchor: new THREE.Vector3(line.x1, 10, line.z),
     card: {
       kicker: 'Régate en flotte', title: 'Prends le départ !', accent: '#ffc845', raceBtn: true,
-      body: 'Contre 2 foilers. Passe la ligne (entre la bouée viseur et le comité) vers le nord après le signal, enroule la bouée jaune au nord en la laissant à bâbord, reviens finir sur la ligne. Règles : bâbord amure s’écarte de tribord amure ; au vent s’écarte de sous le vent ; celui qui est derrière s’écarte de celui devant.',
+      body: 'Contre 2 foilers. Passe la ligne (entre la bouée viseur et le comité) vers le nord après le signal, enroule la bouée jaune au nord en la laissant à bâbord, reviens finir sur la ligne. Règles : 10, bâbord amure s’écarte de tribord amure ; 11, au vent s’écarte de sous le vent ; 12, celui qui est derrière s’écarte de celui devant ; 31, ne touche ni les bouées ni le comité. Au-dessus de la ligne au signal : OCS, il faut repasser la ligne.',
       tags: ['Départ 30 s après inscription', 'Règles de base'],
     },
   });
@@ -738,12 +738,13 @@ function updateRaceUi() {
   raceHud.hidden = !show;
   if (!show) return;
   if (race.state === 'countdown') {
-    raceHud.innerHTML = `<b>🏁 Départ dans ${fmtTime(Math.ceil(race.timer))}</b><span>Reste sous la ligne (au sud) jusqu’au signal.</span>`;
+    const over = boat.pos.y < COURSE.line.z;
+    raceHud.innerHTML = `<b>🏁 Départ dans ${fmtTime(Math.ceil(race.timer))}</b><span>${over ? '⚠️ Tu es au-dessus de la ligne : redescends avant le signal !' : 'Reste sous la ligne (au sud) jusqu’au signal.'}</span>`;
   } else if (race.state === 'racing') {
     const st = race.standings(boat);
     const me = st.findIndex((c) => c.human) + 1;
     const pl = race.player;
-    const leg = pl.ocs ? 'Départ anticipé : repasse sous la ligne' : pl.phase === 'pre' ? 'Passe la ligne vers le nord' : pl.phase === 'beat' ? 'Au près → bouée jaune' : pl.phase === 'run' ? 'Au portant → ligne d’arrivée' : 'Arrivé';
+    const leg = pl.ocs ? '🚩 OCS : repasse sous la ligne' : pl.phase === 'pre' ? 'Passe la ligne vers le nord' : pl.phase === 'beat' ? 'Au près → bouée jaune' : pl.phase === 'run' ? 'Au portant → ligne d’arrivée' : 'Arrivé';
     raceHud.innerHTML = `<b>${me}<sup>${me === 1 ? 'er' : 'e'}</sup> / ${st.length} · ${fmtTime(race.clock)}</b><span>${leg}</span>`;
   } else if (race.state === 'results') {
     raceHud.innerHTML = `<b>🏁 Classement</b><ol>${race.standings(boat).map((c) => `<li class="${c.human ? 'me' : ''}">${c.name}${c.finished !== null ? ` <i>${fmtTime(c.finished)}</i>` : ' <i>—</i>'}</li>`).join('')}</ol>`;
