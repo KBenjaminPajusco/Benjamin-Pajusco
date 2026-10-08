@@ -130,7 +130,7 @@ function readInput() {
       input.power = Math.hypot(dx, dz) > 12 ? 1 : 0.3;
     }
   }
-  if (!started) { input.steer = 0; input.power = 0.1; }
+  if (!started) { input.steer = 0; input.power = 0; }
   input.any = input.steer !== 0 || input.power > 0 || input.brake;
   if (!touched && (input.steer || input.power === 1)) {
     touched = true;
@@ -172,7 +172,9 @@ function updateAction(dt) {
     }
     setAction(landing ? 'Débarquer' : null);
   } else {
-    setAction(Math.hypot(walker.pos.x - boat.pos.x, walker.pos.y - boat.pos.y) < 28 ? 'Rembarquer' : null);
+    const near = Math.hypot(walker.pos.x - boat.pos.x, walker.pos.y - boat.pos.y) < 28;
+    // Sur l'île, bateau amarré au port : on peut toujours y retourner d'un geste.
+    setAction(near ? 'Rembarquer' : world.inPort(boat.pos) && world.inPort(walker.pos) ? 'Retour au bateau' : null);
   }
 }
 function setAction(label) {
@@ -546,14 +548,14 @@ function goTo(z) {
   const fade = $('#fade');
   fade.classList.add('on');
   setTimeout(() => {
-    const p = new THREE.Vector2(z.x, z.z + 0.1);
+    // Lieu à terre : le bateau est amarré au ponton du port, jamais posé dans l'île.
+    const p = z.land ? new THREE.Vector2(world.berth.x, world.berth.z) : new THREE.Vector2(z.x, z.z + 0.1);
     for (let i = 0; i < 4; i++) world.collide(p, 8);
     boat.pos.copy(p);
     boat.heading = Math.PI;
     boat.speed = 0;
-    // Lieu à terre : on débarque directement à côté.
     // Lieu à terre : on pose le marin devant ce qu'il vient voir.
-    const spot = z.land && (world.landingSpot(z.land.x, z.land.z, 30) || world.landingSpot(p.x, p.y));
+    const spot = z.land && (world.landingSpot(z.land.x, z.land.z, 30) || world.landingSpot(p.x, p.y, 140));
     if (spot) disembark(spot);
     else { mode = 'boat'; walker.root.visible = false; }
     focus.set(spot ? spot.x : p.x, 0, spot ? spot.y : p.y);
@@ -748,7 +750,8 @@ function tick(dt) {
   } else {
     // Fiche ouverte et commandes lâchées : le bateau se fige en gardant sa vitesse (il repart d'un coup
     // dès qu'on reprend la barre) et le décor passe en noir et blanc pour mettre l'information en avant.
-    frozen = started && !!activeZone && !input.any && !race.playerIn;
+    // Seulement une fois que le visiteur a pris la barre : jamais de noir et blanc « tout seul ».
+    frozen = started && touched && !!activeZone && !input.any && !race.playerIn;
     if (!frozen) boat.update(dt, input, world.collide);
   }
   if (mode === 'walk') frozen = false;

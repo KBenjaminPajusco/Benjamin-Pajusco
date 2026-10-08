@@ -875,5 +875,5 @@ export function buildWorld(scene) {
   }
 
   const addObstacle = (c) => circles.push(c);
-  return { zones, labels, collide, update, map, bound: BOUND, groundY, walkable, landingSpot, cafe: cafeLoop, phare, regions, inRegion, inPort, water, addObstacle };
+  return { berth: kcBerth, zones, labels, collide, update, map, bound: BOUND, groundY, walkable, landingSpot, cafe: cafeLoop, phare, regions, inRegion, inPort, water, addObstacle };
 }

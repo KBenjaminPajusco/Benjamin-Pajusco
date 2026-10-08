@@ -228,7 +228,7 @@ export class Boat {
     this.turn = THREE.MathUtils.damp(this.turn, steer, 6, dt);
     this.heading = wrap(this.heading + this.turn * 1.15 * grip * dt);
 
-    const power = input.brake ? 0 : input.power > 0 ? input.power : 0.12;
+    const power = input.brake ? 0 : input.power; // sans commande, le bateau ralentit et s'arrête
     const target = this.maxSpeed * power * polar(this.twa);
     const rate = target > this.speed ? 0.55 : input.moor ? 3.5 : input.brake ? 1.6 : 0.6;
     this.speed += (target - this.speed) * Math.min(rate * dt, 1);
