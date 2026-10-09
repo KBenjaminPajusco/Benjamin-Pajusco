@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261009104605';
-import { buildWorld, LAYOUT } from './world.js?v=20261009104605';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009104605';
-import { Walker } from './walker.js?v=20261009104605';
-import { Rib } from './rib.js?v=20261009104605';
-import { applyDayNight, currentHour } from './daynight.js?v=20261009104605';
-import { STEPS, TEAM } from './cafe.js?v=20261009104605';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009104605';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009104605';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009104605';
-import { Race, COURSE } from './race.js?v=20261009104605';
-import { StaticMerger } from './optimize.js?v=20261009104605';
-import { solid, WIND } from './toon.js?v=20261009104605';
+import { Boat } from './boat.js?v=20261009104916';
+import { buildWorld, LAYOUT } from './world.js?v=20261009104916';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009104916';
+import { Walker } from './walker.js?v=20261009104916';
+import { Rib } from './rib.js?v=20261009104916';
+import { applyDayNight, currentHour } from './daynight.js?v=20261009104916';
+import { STEPS, TEAM } from './cafe.js?v=20261009104916';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009104916';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009104916';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009104916';
+import { Race, COURSE } from './race.js?v=20261009104916';
+import { StaticMerger } from './optimize.js?v=20261009104916';
+import { solid, WIND } from './toon.js?v=20261009104916';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -789,27 +789,32 @@ big.addEventListener('click', (e) => {
   if (best) goTo(best);
 });
 
-// Téléportation en fondu : le bateau est posé dans l'eau au plus près du lieu, cap au nord.
-// --- Indice d'arrivée : un rond qui pulse sur l'eau, vers les premières bouées (le parcours mène à l'île) ;
-// il suffit de maintenir le clic ou le doigt dessus. Il s'efface après 3 s de navigation.
+// --- Indice d'arrivée : un rond qui pulse, fixe à l'écran, du côté des premières bouées (le parcours mène à l'île).
+// Il ne suit pas la scène : c'est là qu'on garde le clic ou le doigt appuyé pour barrer. Il s'efface après 3 s de navigation.
 const holdEl = $('#hold');
 holdEl.querySelector('.hold-txt').textContent = IS_MOBILE ? 'Maintiens ton doigt ici' : 'Maintiens le clic ici';
 const holdAt = new THREE.Vector3();
 let holdMoved = 0;
-function showHold() {
+function placeHold() {
   const first = world.zones.find((z) => z.id === EXPERIENCES[0].id) || { x: boat.pos.x + 40, z: boat.pos.y };
   const dx = first.x - boat.pos.x, dz = first.z - boat.pos.y, l = Math.hypot(dx, dz) || 1;
   holdAt.set(boat.pos.x + (dx / l) * 32, 0, boat.pos.y + (dz / l) * 32);
+  const p = toScreen(holdAt);
+  const x = Math.min(Math.max(p.x, 60), innerWidth - 60), y = Math.min(Math.max(p.y, 60), innerHeight - 90);
+  holdEl.style.transform = `translate(${x}px, ${y}px)`;
+}
+function showHold() {
+  placeHold();
   holdMoved = 0;
   holdEl.hidden = false;
 }
+addEventListener('resize', () => { if (!holdEl.hidden) placeHold(); });
 function updateHold(dt, moving) {
-  if (holdEl.hidden) return;
+  if (holdEl.hidden || holdEl.classList.contains('gone')) return;
   if (moving) holdMoved += dt;
-  if (holdMoved > 3) { holdEl.classList.add('gone'); setTimeout(() => { holdEl.hidden = true; }, 500); return; }
-  const p = toScreen(holdAt);
-  holdEl.style.transform = `translate(${p.x}px, ${p.y}px)`;
+  if (holdMoved > 3) { holdEl.classList.add('gone'); setTimeout(() => { holdEl.hidden = true; }, 500); }
 }
+// Téléportation en fondu : le bateau est posé dans l'eau au plus près du lieu, cap au nord.
 function goTo(z) {
   closeMap();
   const fade = $('#fade');

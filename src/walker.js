@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { person } from './characters.js?v=20261009104605';
+import { person } from './characters.js?v=20261009104916';
 
 // Le marin à terre : on le dirige comme le bateau, mais relativement à l'écran (haut = nord).
 export class Walker {
