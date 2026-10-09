@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon, PALETTE } from './toon.js?v=20261008163212';
-import { SKILLS } from './cv.js?v=20261008163212';
+import { solid, toon, PALETTE } from './toon.js?v=20261009103817';
+import { SKILLS } from './cv.js?v=20261009103817';
 
 // Le Phare des maîtrises : un phare bâti comme l'icône d'une base de données (disques empilés).
 // Le bateau lui envoie sa télémétrie quand il s'approche, et des câbles de données le relient au monde.

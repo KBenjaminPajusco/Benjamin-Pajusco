@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261008163212';
-import { buildWorld, LAYOUT } from './world.js?v=20261008163212';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261008163212';
-import { Walker } from './walker.js?v=20261008163212';
-import { Rib } from './rib.js?v=20261008163212';
-import { applyDayNight, currentHour } from './daynight.js?v=20261008163212';
-import { STEPS, TEAM } from './cafe.js?v=20261008163212';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261008163212';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261008163212';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261008163212';
-import { Race, COURSE } from './race.js?v=20261008163212';
-import { StaticMerger } from './optimize.js?v=20261008163212';
-import { solid, WIND } from './toon.js?v=20261008163212';
+import { Boat } from './boat.js?v=20261009103817';
+import { buildWorld, LAYOUT } from './world.js?v=20261009103817';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009103817';
+import { Walker } from './walker.js?v=20261009103817';
+import { Rib } from './rib.js?v=20261009103817';
+import { applyDayNight, currentHour } from './daynight.js?v=20261009103817';
+import { STEPS, TEAM } from './cafe.js?v=20261009103817';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009103817';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009103817';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009103817';
+import { Race, COURSE } from './race.js?v=20261009103817';
+import { StaticMerger } from './optimize.js?v=20261009103817';
+import { solid, WIND } from './toon.js?v=20261009103817';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -148,9 +148,33 @@ function readInput() {
 }
 
 // À pied, les directions sont celles de l'écran (haut = nord) : plus naturel en vue de dessus.
+// Joystick tactile (téléphone) : marcher sans viser l'écran, même quand la caméra cadre un bâtiment.
+const joy = { x: 0, y: 0, active: false };
+{
+  const el = $('#joy'), knob = el.querySelector('.joy-knob');
+  const move = (e) => {
+    const r = el.getBoundingClientRect(), R = r.width / 2;
+    let dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R);
+    const l = Math.hypot(dx, dy), max = R * 0.62;
+    if (l > max) { dx *= max / l; dy *= max / l; }
+    joy.x = dx / max; joy.y = dy / max;
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+  el.addEventListener('pointerdown', (e) => { joy.active = true; el.setPointerCapture(e.pointerId); move(e); e.preventDefault(); });
+  el.addEventListener('pointermove', (e) => joy.active && move(e));
+  const end = () => { joy.active = false; joy.x = joy.y = 0; knob.style.transform = ''; };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
 function readWalkInput() {
   const k = (...names) => names.some((n) => keys.has(n));
   const v = { x: 0, z: 0, run: keys.has('shift') };
+  if (joy.active) {
+    // Haut de l'écran = nord ; poussé à fond, on court.
+    v.x = joy.x; v.z = joy.y;
+    v.run = Math.hypot(joy.x, joy.y) > 0.92;
+    return v;
+  }
   if (k('arrowleft', 'a', 'q')) v.x -= 1;
   if (k('arrowright', 'd')) v.x += 1;
   if (k('arrowup', 'w', 'z')) v.z -= 1;
@@ -195,7 +219,7 @@ function disembark(spot) {
   walker.heading = Math.atan2(spot.x - boat.pos.x, spot.y - boat.pos.y);
   walker.root.visible = true;
   boat.speed = 0;
-  $('#hint').textContent = 'Flèches pour marcher · Maj pour courir · ou garde le clic enfoncé · E pour rembarquer près du bateau';
+  $('#hint').textContent = IS_MOBILE ? 'Joystick pour marcher (à fond pour courir) · bouton pour rembarquer' : 'Flèches pour marcher · Maj pour courir · ou garde le clic enfoncé · E pour rembarquer près du bateau';
   $('#hint').classList.remove('gone');
   setTimeout(() => $('#hint').classList.add('gone'), 4000);
 }
@@ -766,6 +790,19 @@ big.addEventListener('click', (e) => {
 });
 
 // Téléportation en fondu : le bateau est posé dans l'eau au plus près du lieu, cap au nord.
+// --- Mini-tutoriel à l'arrivée : choisir où aller, et les commandes du support utilisé.
+const tipEl = $('#tip');
+tipEl.querySelector('.tip-keys').textContent = IS_MOBILE
+  ? 'Touche l’eau pour barrer vers ce point · 🗺️ la carte en haut à gauche · à terre, un joystick pour marcher'
+  : '← → pour barrer · ↑ pour accélérer · M ou la mini-carte pour la carte · ou clic maintenu pour aller vers un point';
+function showTip() { tipEl.hidden = false; }
+function hideTip() { tipEl.hidden = true; }
+tipEl.querySelector('.tip-close').addEventListener('click', hideTip);
+tipEl.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
+  hideTip();
+  const z = world.zones.find((q) => q.id === b.dataset.go);
+  if (z) goTo(z);
+}));
 function goTo(z) {
   closeMap();
   const fade = $('#fade');
@@ -1102,6 +1139,7 @@ function cinePose(dt, play) {
   cine.phase = 'done';
   cineOverview = false;
   started = true;
+  setTimeout(showTip, 400);
   return null;
 }
 const OVERWORLD_TRAVEL = false; // true : gros bateau + vue globale entre les régions (essai JRPG)
@@ -1163,6 +1201,9 @@ function tick(dt) {
     if (!frozen) boat.update(dt, input, world.collide);
   }
   if (mode === 'walk') frozen = false;
+  const joyOn = IS_MOBILE && mode === 'walk' && started;
+  if ($('#joy').hidden === joyOn) $('#joy').hidden = !joyOn;
+  if (!tipEl.hidden && input.any) hideTip();
   canvas.classList.toggle('frozen', frozen);
   updateAction(dt);
   race.update(dt, boat);

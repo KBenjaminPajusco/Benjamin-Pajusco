@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, toon, PALETTE } from './toon.js?v=20261008163212';
-import { person } from './characters.js?v=20261008163212';
-import { navLights } from './island.js?v=20261008163212';
+import { solid, toon, PALETTE } from './toon.js?v=20261009103817';
+import { person } from './characters.js?v=20261009103817';
+import { navLights } from './island.js?v=20261009103817';
 
 // Semi-rigide à moteur pour les visiteurs qui ne naviguent pas : il se conduit comme une voiture,
 // sans vent ni réglage. Même interface que Boat (pos, heading, speed, update, wakePoints…).
