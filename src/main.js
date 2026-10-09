@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261009103817';
-import { buildWorld, LAYOUT } from './world.js?v=20261009103817';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009103817';
-import { Walker } from './walker.js?v=20261009103817';
-import { Rib } from './rib.js?v=20261009103817';
-import { applyDayNight, currentHour } from './daynight.js?v=20261009103817';
-import { STEPS, TEAM } from './cafe.js?v=20261009103817';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009103817';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009103817';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009103817';
-import { Race, COURSE } from './race.js?v=20261009103817';
-import { StaticMerger } from './optimize.js?v=20261009103817';
-import { solid, WIND } from './toon.js?v=20261009103817';
+import { Boat } from './boat.js?v=20261009104605';
+import { buildWorld, LAYOUT } from './world.js?v=20261009104605';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009104605';
+import { Walker } from './walker.js?v=20261009104605';
+import { Rib } from './rib.js?v=20261009104605';
+import { applyDayNight, currentHour } from './daynight.js?v=20261009104605';
+import { STEPS, TEAM } from './cafe.js?v=20261009104605';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009104605';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009104605';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009104605';
+import { Race, COURSE } from './race.js?v=20261009104605';
+import { StaticMerger } from './optimize.js?v=20261009104605';
+import { solid, WIND } from './toon.js?v=20261009104605';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -790,19 +790,26 @@ big.addEventListener('click', (e) => {
 });
 
 // Téléportation en fondu : le bateau est posé dans l'eau au plus près du lieu, cap au nord.
-// --- Mini-tutoriel à l'arrivée : choisir où aller, et les commandes du support utilisé.
-const tipEl = $('#tip');
-tipEl.querySelector('.tip-keys').textContent = IS_MOBILE
-  ? 'Touche l’eau pour barrer vers ce point · 🗺️ la carte en haut à gauche · à terre, un joystick pour marcher'
-  : '← → pour barrer · ↑ pour accélérer · M ou la mini-carte pour la carte · ou clic maintenu pour aller vers un point';
-function showTip() { tipEl.hidden = false; }
-function hideTip() { tipEl.hidden = true; }
-tipEl.querySelector('.tip-close').addEventListener('click', hideTip);
-tipEl.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
-  hideTip();
-  const z = world.zones.find((q) => q.id === b.dataset.go);
-  if (z) goTo(z);
-}));
+// --- Indice d'arrivée : un rond qui pulse sur l'eau, vers les premières bouées (le parcours mène à l'île) ;
+// il suffit de maintenir le clic ou le doigt dessus. Il s'efface après 3 s de navigation.
+const holdEl = $('#hold');
+holdEl.querySelector('.hold-txt').textContent = IS_MOBILE ? 'Maintiens ton doigt ici' : 'Maintiens le clic ici';
+const holdAt = new THREE.Vector3();
+let holdMoved = 0;
+function showHold() {
+  const first = world.zones.find((z) => z.id === EXPERIENCES[0].id) || { x: boat.pos.x + 40, z: boat.pos.y };
+  const dx = first.x - boat.pos.x, dz = first.z - boat.pos.y, l = Math.hypot(dx, dz) || 1;
+  holdAt.set(boat.pos.x + (dx / l) * 32, 0, boat.pos.y + (dz / l) * 32);
+  holdMoved = 0;
+  holdEl.hidden = false;
+}
+function updateHold(dt, moving) {
+  if (holdEl.hidden) return;
+  if (moving) holdMoved += dt;
+  if (holdMoved > 3) { holdEl.classList.add('gone'); setTimeout(() => { holdEl.hidden = true; }, 500); return; }
+  const p = toScreen(holdAt);
+  holdEl.style.transform = `translate(${p.x}px, ${p.y}px)`;
+}
 function goTo(z) {
   closeMap();
   const fade = $('#fade');
@@ -1139,7 +1146,7 @@ function cinePose(dt, play) {
   cine.phase = 'done';
   cineOverview = false;
   started = true;
-  setTimeout(showTip, 400);
+  setTimeout(showHold, 300);
   return null;
 }
 const OVERWORLD_TRAVEL = false; // true : gros bateau + vue globale entre les régions (essai JRPG)
@@ -1203,7 +1210,7 @@ function tick(dt) {
   if (mode === 'walk') frozen = false;
   const joyOn = IS_MOBILE && mode === 'walk' && started;
   if ($('#joy').hidden === joyOn) $('#joy').hidden = !joyOn;
-  if (!tipEl.hidden && input.any) hideTip();
+  updateHold(dt, started && (input.any || boat.speed > 3));
   canvas.classList.toggle('frozen', frozen);
   updateAction(dt);
   race.update(dt, boat);

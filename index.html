@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261009103817">
+  <link rel="stylesheet" href="style.css?v=20261009104605">
   <script type="importmap">
     {
       "imports": {
@@ -171,18 +171,7 @@
     </figure>
   </section>
   <div id="joy" class="joy" hidden aria-label="Joystick pour marcher"><div class="joy-knob"></div></div>
-  <section id="tip" class="tip" hidden>
-    <p class="tip-tag">Bienvenue à bord</p>
-    <h2>Par où commencer ?</h2>
-    <div class="tip-go">
-      <button data-go="naval"><b>⛵ Mon parcours</b><small>les bouées, de la première à aujourd’hui</small></button>
-      <button data-go="port"><b>🏝️ L’île</b><small>formation, emploi, centres d’intérêt</small></button>
-      <button data-go="phare"><b>💡 Mes compétences</b><small>le Phare des maîtrises</small></button>
-      <button data-go="regate"><b>🏁 Une régate</b><small>contre deux foilers</small></button>
-    </div>
-    <p class="tip-keys"></p>
-    <button class="btn ghost tip-close">J’explore tout seul →</button>
-  </section>
+  <div id="hold" class="hold" hidden><span class="hold-ring"></span><b class="hold-txt"></b></div>
   <button id="card-tab" class="card-tab" hidden aria-label="Rouvrir la fiche">ⓘ</button>
   <div id="stamp" hidden><svg class="geo" aria-hidden="true"></svg><div class="place"></div><div class="coords"></div><div class="dist"></div></div>
 
@@ -237,6 +226,6 @@
     </div>
   </section>
 
-  <script type="module" src="src/main.js?v=20261009103817"></script>
+  <script type="module" src="src/main.js?v=20261009104605"></script>
 </body>
 </html>

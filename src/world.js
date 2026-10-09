@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { solid, toon, rng, PALETTE } from './toon.js?v=20261009103817';
-import { makeWater } from './effects.js?v=20261009103817';
-import { person } from './characters.js?v=20261009103817';
-import { buildCafe } from './cafe.js?v=20261009103817';
-import { buildMatchRace } from './matchrace.js?v=20261009103817';
-import { buildPhare } from './phare.js?v=20261009103817';
-import { Boat } from './boat.js?v=20261009103817';
-import { buildDecor } from './decor.js?v=20261009103817';
-import { buildTown } from './town.js?v=20261009103817';
-import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261009103817';
-import { buildIslandLife } from './islandlife.js?v=20261009103817';
-import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261009103817';
+import { solid, toon, rng, PALETTE } from './toon.js?v=20261009104605';
+import { makeWater } from './effects.js?v=20261009104605';
+import { person } from './characters.js?v=20261009104605';
+import { buildCafe } from './cafe.js?v=20261009104605';
+import { buildMatchRace } from './matchrace.js?v=20261009104605';
+import { buildPhare } from './phare.js?v=20261009104605';
+import { Boat } from './boat.js?v=20261009104605';
+import { buildDecor } from './decor.js?v=20261009104605';
+import { buildTown } from './town.js?v=20261009104605';
+import { buildIsland, insidePoly, nearestOnPoly } from './island.js?v=20261009104605';
+import { buildIslandLife } from './islandlife.js?v=20261009104605';
+import { EXPERIENCES, EDUCATION, PLACES, INTERESTS, PROFILE, AI_FLOW } from './cv.js?v=20261009104605';
 
 // Plan du monde (le vent vient du nord, -z) :
 //   départ + nom flottant au centre, chenal du parcours vers l'est,
@@ -324,7 +324,7 @@ export function buildWorld(scene) {
       g.rotation.z = Math.sin(t * 1.1 + i) * 0.05;
       f.userData.cloth.rotation.y = Math.sin(t * 3 + i) * 0.25;
     });
-    circles.push({ x, z, r: 2.6 });
+    circles.push({ x, z, r: 2.6, soft: true }); // franchissable : on traverse les bouées du parcours
     map.buoys.push(mapDot);
     addWaypoint(exp, x, z, 17, 12.6);
   });
@@ -670,7 +670,7 @@ export function buildWorld(scene) {
       m.add(solid(new THREE.CylinderGeometry(1.8, 2.1, 4.2, 10).translate(0, 1.4, 0), col, { outlineWidth: 0.1 }));
       m.add(solid(new THREE.SphereGeometry(1.8, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 3.5, 0), col, { outlineWidth: 0.1 }));
       root.add(m);
-      circles.push({ x: p.x, z: p.z, r: 2.6 });
+      circles.push({ x: p.x, z: p.z, r: 2.6, soft: true });
       map.marks.push(p);
       const ph = Math.random() * 6;
       anim.push((dt, t) => { m.position.y = Math.sin(t * 1.4 + ph) * 0.3; });
@@ -1029,6 +1029,7 @@ export function buildWorld(scene) {
       }
     }
     for (const c of circles) {
+      if (c.soft) continue; // bouées : décor qu'on peut traverser
       const dx = pos.x - c.x, dz = pos.y - c.z;
       const d = Math.hypot(dx, dz), min = c.r + radius;
       if (d < min && d > 1e-4) { pos.x = c.x + (dx / d) * min; pos.y = c.z + (dz / d) * min; hit = true; }
