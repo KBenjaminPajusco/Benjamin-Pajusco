@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { solid, toon } from './toon.js?v=20261009104916';
-import { person } from './characters.js?v=20261009104916';
+import { solid, toon } from './toon.js?v=20261009105226';
+import { person } from './characters.js?v=20261009105226';
 
 // L'île du port : un littoral organique (courbe fermée) au lieu d'un quai rectangulaire,
 // une corniche en bord de mer avec ses joggeurs et ses lampadaires.

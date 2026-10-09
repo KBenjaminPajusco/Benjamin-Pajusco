@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { Boat } from './boat.js?v=20261009104916';
-import { buildWorld, LAYOUT } from './world.js?v=20261009104916';
-import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009104916';
-import { Walker } from './walker.js?v=20261009104916';
-import { Rib } from './rib.js?v=20261009104916';
-import { applyDayNight, currentHour } from './daynight.js?v=20261009104916';
-import { STEPS, TEAM } from './cafe.js?v=20261009104916';
-import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009104916';
-import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009104916';
-import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009104916';
-import { Race, COURSE } from './race.js?v=20261009104916';
-import { StaticMerger } from './optimize.js?v=20261009104916';
-import { solid, WIND } from './toon.js?v=20261009104916';
+import { Boat } from './boat.js?v=20261009105226';
+import { buildWorld, LAYOUT } from './world.js?v=20261009105226';
+import { Wake, FoilSpray, WindStreaks } from './effects.js?v=20261009105226';
+import { Walker } from './walker.js?v=20261009105226';
+import { Rib } from './rib.js?v=20261009105226';
+import { applyDayNight, currentHour } from './daynight.js?v=20261009105226';
+import { STEPS, TEAM } from './cafe.js?v=20261009105226';
+import { renderGeoMap, renderRegattaMap } from './geomap.js?v=20261009105226';
+import { DataStream, Recorder, TelemetryPanel } from './telemetry.js?v=20261009105226';
+import { PROFILE, EXPERIENCES, EDUCATION, INTERESTS, LANGUAGES, CONCEPTS, WORKS, REGATTAS, SKILLS } from './cv.js?v=20261009105226';
+import { Race, COURSE } from './race.js?v=20261009105226';
+import { StaticMerger } from './optimize.js?v=20261009105226';
+import { solid, WIND } from './toon.js?v=20261009105226';
 
 const $ = (s) => document.querySelector(s);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -152,15 +152,22 @@ function readInput() {
 const joy = { x: 0, y: 0, active: false };
 {
   const el = $('#joy'), knob = el.querySelector('.joy-knob');
+  // Le centre est mémorisé au moment où le doigt se pose : si le joystick se décale ensuite à l'écran
+  // (une fiche s'ouvre ou se ferme en entrant dans un lieu), la direction ne change pas.
+  const origin = { x: 0, y: 0, R: 56 };
   const move = (e) => {
-    const r = el.getBoundingClientRect(), R = r.width / 2;
-    let dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R);
+    const R = origin.R;
+    let dx = e.clientX - origin.x, dy = e.clientY - origin.y;
     const l = Math.hypot(dx, dy), max = R * 0.62;
     if (l > max) { dx *= max / l; dy *= max / l; }
     joy.x = dx / max; joy.y = dy / max;
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
   };
-  el.addEventListener('pointerdown', (e) => { joy.active = true; el.setPointerCapture(e.pointerId); move(e); e.preventDefault(); });
+  el.addEventListener('pointerdown', (e) => {
+    const r = el.getBoundingClientRect();
+    origin.R = r.width / 2; origin.x = r.left + origin.R; origin.y = r.top + origin.R;
+    joy.active = true; el.setPointerCapture(e.pointerId); move(e); e.preventDefault();
+  });
   el.addEventListener('pointermove', (e) => joy.active && move(e));
   const end = () => { joy.active = false; joy.x = joy.y = 0; knob.style.transform = ''; };
   el.addEventListener('pointerup', end);
