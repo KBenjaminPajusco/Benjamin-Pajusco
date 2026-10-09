@@ -8,6 +8,7 @@ Usage : python tools/version.py   (à lancer avant chaque commit publié)
 """
 import pathlib
 import re
+import subprocess
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -24,5 +25,8 @@ for path in (ROOT / 'src').glob('*.js'):
     stamped = re.sub(r"(from\s+'\./[\w-]+\.js)(\?v=\w+)?'", rf"\1?v={version}'", code)
     if stamped != code:
         path.write_text(stamped, encoding='utf8', newline='')
+
+# La version texte du site (llms.txt, cv.md) suit toujours src/cv.js.
+subprocess.run(['node', '--no-warnings', str(ROOT / 'tools' / 'llms.mjs')], check=True)
 
 print(f'version {version}')

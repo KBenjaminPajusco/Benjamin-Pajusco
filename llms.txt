@@ -1,0 +1,15 @@
+# Benjamin Pajusco
+
+> Ingénieur Performance & IA chez K-Challenge Racing & Lab (Coupe de l’America). Voile · data · simulation · agents IA. Diplômé ingénieur informatique de Polytech Nantes, sportif de haut niveau en voile (match racing).
+
+Le site est un portfolio 3D interactif : on choisit un foiler ou un semi-rigide, on navigue entre les bouées du parcours professionnel jusqu’à une île (formation, emploi, centres d’intérêt), on peut y débarquer à pied, visiter le Phare des compétences et courir une régate contre deux bateaux. Tout le monde 3D est procédural (Three.js, aucun modèle 3D importé) et se joue au clavier, à la souris ou au doigt. Une version rapide, en texte, est accessible depuis le bouton « Version rapide » / « CV classique ».
+
+## CV
+
+- [CV complet en Markdown](https://benjamin.pajusco.fr/cv.md) : expériences, formation, compétences, réalisations, langues, centres d’intérêt
+- [Portfolio 3D](https://benjamin.pajusco.fr/) : l’expérience interactive
+
+## Contact
+
+- Email : benjamin.pajusco@gmail.com
+- LinkedIn : https://www.linkedin.com/in/benjamin-pajusco-075b9b1b9/

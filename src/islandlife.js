@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { solid, toon as toonMat, rng, PALETTE } from './toon.js?v=20261009105226';
-import { person } from './characters.js?v=20261009105226';
-import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261009105226';
+import { solid, toon as toonMat, rng, PALETTE } from './toon.js?v=20261009171854';
+import { person } from './characters.js?v=20261009171854';
+import { insidePoly, nearestOnPoly, lampPost } from './island.js?v=20261009171854';
 
 
 // La vie de l'île : plage et vagues, parc, arbres, immeubles, tour, entrepôts, supermarché et son parking.
